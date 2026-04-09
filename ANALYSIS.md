@@ -6,33 +6,33 @@ PDF.js is a client-side PDF rendering engine built entirely in JavaScript. It us
 
 ### Layer Diagram
 
-```
-+---------------------------------------------------------+
-|                   Web Viewer (web/)                      |
-|  app.js, pdf_viewer.js, pdf_page_view.js, toolbar.js    |
-+---------------------------------------------------------+
-          |                          |
-          v                          v
-+--------------------------+  +---------------------------+
-|   Display Layer          |  |  Annotation / Editor      |
-|   (src/display/)         |  |  Layers                   |
-|   api.js, canvas.js,     |  |  annotation_layer.js,     |
-|   text_layer.js          |  |  editor/                  |
-+--------------------------+  +---------------------------+
-          |
-          | MessageHandler (postMessage)
-          |
-+---------------------------------------------------------+
-|                Core Layer (src/core/)                    |
-|  worker.js, document.js, evaluator.js, xref.js,        |
-|  parser.js, fonts.js, image.js, colorspace.js           |
-+---------------------------------------------------------+
-          |
-          v
-+---------------------------------------------------------+
-|             Shared Utilities (src/shared/)               |
-|  message_handler.js, util.js, image_utils.js            |
-+---------------------------------------------------------+
+```mermaid
+block-beta
+  columns 2
+
+  viewer["Web Viewer (web/)\napp.js · pdf_viewer.js · toolbar.js"]:2
+
+  display["Display Layer (src/display/)\napi.js · canvas.js · text_layer.js"]
+  annotation["Annotation / Editor Layers\nannotation_layer.js · editor/"]
+
+  space:2
+
+  msg["⇅ MessageHandler — postMessage"]:2
+
+  space:2
+
+  core["Core Layer (src/core/)\nworker.js · evaluator.js · xref.js · parser.js · fonts.js"]:2
+
+  scripting["Scripting Sandbox\n(src/scripting_api/)\nQuickJS iframe"]
+  shared["Shared Utilities\n(src/shared/)\nmessage_handler.js · util.js"]
+
+  style viewer fill:#4a90d9,color:#fff
+  style display fill:#50b5a9,color:#fff
+  style annotation fill:#50b5a9,color:#fff
+  style msg fill:#f5a623,color:#fff
+  style core fill:#d94a4a,color:#fff
+  style scripting fill:#8e6cbf,color:#fff
+  style shared fill:#7f8c8d,color:#fff
 ```
 
 ### The Five Layers
@@ -88,35 +88,30 @@ A complete reference PDF viewer application:
 
 ### Worker Communication Flow
 
-```
-Main Thread                            Worker Thread
------------                            -------------
-getDocument(src)
-  |
-  +--> PDFWorker.create()
-         |
-         +--> new Worker("pdf.worker.mjs")
-                |
-                +--> WorkerMessageHandler.setup()
-  |
-  +--> send("GetDocRequest", params) -----> setupDoc()
-                                              |
-                                              +--> getPdfManager()
-                                              +--> loadDocument()
-  <---- send("GetDoc", pdfInfo) -----------+
-  |
-  +--> PDFDocumentProxy created
-  |
-  +--> page.render()
-         |
-         +--> sendWithStream("GetOperatorList") --> Page.getOperatorList()
-                                                      |
-                                                      +--> PartialEvaluator
-                                                      |      .getOperatorList()
-         <---- stream chunks (OperatorList IR) ------+
-         |
-         +--> CanvasGraphics.executeOperatorList()
-         +--> Canvas 2D API calls
+```mermaid
+sequenceDiagram
+    participant App as Consumer Code
+    participant Main as Main Thread<br/>(Display Layer)
+    participant Worker as Web Worker<br/>(Core Layer)
+
+    App->>Main: getDocument({ url })
+    Main->>Worker: new Worker("pdf.worker.mjs")
+    Worker-->>Worker: WorkerMessageHandler.setup()
+
+    Main->>Worker: send("GetDocRequest", params)
+    Worker-->>Worker: getPdfManager()<br/>LocalPdfManager or NetworkPdfManager
+    Worker-->>Worker: loadDocument()<br/>XRef.parse() → Catalog → Pages
+    Worker->>Main: send("GetDoc", pdfInfo)
+    Main-->>App: PDFDocumentProxy
+
+    App->>Main: page.render({ canvasContext, viewport })
+    Main->>Worker: sendWithStream("GetOperatorList")
+    Worker-->>Worker: PartialEvaluator.getOperatorList()<br/>Parse content stream → OperatorList
+    loop Streaming chunks
+        Worker->>Main: OperatorList IR chunk
+    end
+    Main-->>Main: CanvasGraphics.executeOperatorList()<br/>Canvas 2D API calls
+    Main-->>App: Render promise resolved
 ```
 
 ---
@@ -205,38 +200,32 @@ Viewer CSS goes through a PostCSS pipeline:
 
 ### 3.1 Document Loading
 
-```
-Consumer code                        PDF.js
---------------                       ------
-pdfjsLib.getDocument({ url })
-    |
-    +--> getDocument() [api.js]
-           |
-           +--> Validate/normalise parameters
-           +--> Create PDFWorker (spawns Web Worker with pdf.worker.mjs)
-           +--> Create network stream (FetchStream or XHR)
-           +--> Send "GetDocRequest" to worker
-           |
-           Worker receives "GetDocRequest":
-           +--> getPdfManager():
-           |      If data in memory -> LocalPdfManager(new Stream(data))
-           |      If streaming      -> NetworkPdfManager(ChunkedStreamManager)
-           |
-           +--> loadDocument():
-           |      pdfManager.ensureDoc("checkHeader")    -- verify %PDF-x.y
-           |      pdfManager.ensureDoc("parseStartXRef") -- find startxref offset
-           |      pdfManager.ensureDoc("parse")          -- XRef.parse():
-           |        |                                       read XRef table/stream
-           |        |                                       build object index
-           |        |                                       read trailer dict
-           |        |                                       init encryption if needed
-           |        |                                       find Root (Catalog)
-           |      pdfManager.ensureDoc("checkFirstPage")
-           |      pdfManager.ensureDoc("checkLastPage")
-           |
-           +--> Returns { numPages, fingerprints, htmlForXfa }
-    |
-    +--> PDFDocumentProxy created on main thread
+```mermaid
+flowchart TD
+    A["pdfjsLib.getDocument({ url })"] --> B["getDocument() — api.js"]
+    B --> C["Validate & normalise parameters"]
+    C --> D["Create PDFWorker\n(spawns Web Worker with pdf.worker.mjs)"]
+    D --> E["Create network stream\n(FetchStream or XHR)"]
+    E --> F["Send 'GetDocRequest' to worker"]
+
+    F --> G{"Data source?"}
+    G -- "Entire file in memory" --> H["LocalPdfManager\nnew Stream(data)"]
+    G -- "Streaming / range requests" --> I["NetworkPdfManager\nChunkedStreamManager"]
+
+    H --> J["loadDocument()"]
+    I --> J
+
+    J --> K["checkHeader — verify %PDF-x.y"]
+    K --> L["parseStartXRef — find startxref offset"]
+    L --> M["XRef.parse()\n• Read XRef table/stream\n• Build object index\n• Read trailer dict\n• Init encryption if needed\n• Find Root (Catalog)"]
+    M --> N["checkFirstPage / checkLastPage"]
+    N --> O["Return { numPages, fingerprints, htmlForXfa }"]
+    O --> P["PDFDocumentProxy created on main thread"]
+
+    style A fill:#4a90d9,color:#fff
+    style P fill:#4a90d9,color:#fff
+    style G fill:#f5a623,color:#fff
+    style M fill:#d94a4a,color:#fff
 ```
 
 ### 3.2 Page Rendering
@@ -272,24 +261,23 @@ In parallel, the worker resolves page annotations (`Page._parsedAnnotations`). E
 
 On the main thread, `CanvasGraphics` (`canvas.js`) consumes the operator list:
 
-```
-InternalRenderTask.initializeGraphics()
-    |
-    +--> new CanvasGraphics(canvasContext, ...)
-    |
-    +--> CanvasGraphics.executeOperatorList(operatorList)
-           |
-           Loop (timed at ~15ms slices):
-             Read fnArray[i] -> look up method name from OPS
-             Call this[methodName](argsArray[i])
-             |
-             e.g. OPS.transform -> ctx.transform(a,b,c,d,e,f)
-                  OPS.setFont   -> ctx.font = "..."
-                  OPS.showText  -> ctx.fillText() / path operations
-                  OPS.fill      -> ctx.fill()
-                  OPS.paintImageXObject -> ctx.drawImage()
-           |
-           When operatorList.lastChunk -> resolve render promise
+```mermaid
+flowchart TD
+    A["InternalRenderTask.initializeGraphics()"] --> B["new CanvasGraphics(canvasContext, ...)"]
+    B --> C["executeOperatorList(operatorList)"]
+    C --> D{"Read fnArray[i]"}
+    D --> E["Look up method from OPS enum"]
+    E --> F["Call this[method](argsArray[i])"]
+    F --> G["Canvas 2D API call\ne.g. ctx.transform(), ctx.fill(),\nctx.drawImage(), ctx.fillText()"]
+    G --> H{"More ops &\n< 15ms elapsed?"}
+    H -- Yes --> D
+    H -- "No (time slice used)" --> I["Yield to event loop\n(requestAnimationFrame)"]
+    I --> D
+    H -- "lastChunk reached" --> J["Resolve render promise"]
+
+    style A fill:#50b5a9,color:#fff
+    style J fill:#4a90d9,color:#fff
+    style G fill:#d94a4a,color:#fff
 ```
 
 Key rendering details:
