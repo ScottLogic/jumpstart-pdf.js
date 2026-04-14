@@ -25,12 +25,10 @@ class BaseStream {
     }
   }
 
-  // eslint-disable-next-line getter-return
   get length() {
     unreachable("Abstract getter `length` accessed");
   }
 
-  // eslint-disable-next-line getter-return
   get isEmpty() {
     unreachable("Abstract getter `isEmpty` accessed");
   }

@@ -433,7 +433,6 @@ class IdentityCMap extends CMap {
     return 0x10000;
   }
 
-  // eslint-disable-next-line getter-return
   get isIdentityCMap() {
     unreachable("should not access .isIdentityCMap");
   }

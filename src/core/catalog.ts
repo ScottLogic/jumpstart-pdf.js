@@ -120,7 +120,7 @@ class Catalog {
     }
     // Given that `XRef.parse` will both fetch *and* validate the /Pages-entry,
     // the following call must always succeed here:
-    this.toplevelPagesDict; // eslint-disable-line no-unused-expressions
+    this.toplevelPagesDict;
   }
 
   cloneDict() {

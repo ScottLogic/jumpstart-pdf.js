@@ -23,7 +23,7 @@ const getMetrics = getLookupTableFactory(function (t) {
   t["Courier-Bold"] = 600;
   t["Courier-BoldOblique"] = 600;
   t["Courier-Oblique"] = 600;
-  // eslint-disable-next-line no-shadow
+
   t.Helvetica = getLookupTableFactory(function (t) {
     t.space = 278;
     t.exclam = 278;
@@ -341,7 +341,7 @@ const getMetrics = getLookupTableFactory(function (t) {
     t.imacron = 278;
     t.Euro = 556;
   });
-  // eslint-disable-next-line no-shadow
+
   t["Helvetica-Bold"] = getLookupTableFactory(function (t) {
     t.space = 278;
     t.exclam = 333;
@@ -659,7 +659,7 @@ const getMetrics = getLookupTableFactory(function (t) {
     t.imacron = 278;
     t.Euro = 556;
   });
-  // eslint-disable-next-line no-shadow
+
   t["Helvetica-BoldOblique"] = getLookupTableFactory(function (t) {
     t.space = 278;
     t.exclam = 333;
@@ -977,7 +977,7 @@ const getMetrics = getLookupTableFactory(function (t) {
     t.imacron = 278;
     t.Euro = 556;
   });
-  // eslint-disable-next-line no-shadow
+
   t["Helvetica-Oblique"] = getLookupTableFactory(function (t) {
     t.space = 278;
     t.exclam = 278;
@@ -1295,7 +1295,7 @@ const getMetrics = getLookupTableFactory(function (t) {
     t.imacron = 278;
     t.Euro = 556;
   });
-  // eslint-disable-next-line no-shadow
+
   t.Symbol = getLookupTableFactory(function (t) {
     t.space = 250;
     t.exclam = 333;
@@ -1488,7 +1488,7 @@ const getMetrics = getLookupTableFactory(function (t) {
     t.bracerightbt = 494;
     t.apple = 790;
   });
-  // eslint-disable-next-line no-shadow
+
   t["Times-Roman"] = getLookupTableFactory(function (t) {
     t.space = 250;
     t.exclam = 333;
@@ -1806,7 +1806,7 @@ const getMetrics = getLookupTableFactory(function (t) {
     t.imacron = 278;
     t.Euro = 500;
   });
-  // eslint-disable-next-line no-shadow
+
   t["Times-Bold"] = getLookupTableFactory(function (t) {
     t.space = 250;
     t.exclam = 333;
@@ -2124,7 +2124,7 @@ const getMetrics = getLookupTableFactory(function (t) {
     t.imacron = 278;
     t.Euro = 500;
   });
-  // eslint-disable-next-line no-shadow
+
   t["Times-BoldItalic"] = getLookupTableFactory(function (t) {
     t.space = 250;
     t.exclam = 389;
@@ -2442,7 +2442,7 @@ const getMetrics = getLookupTableFactory(function (t) {
     t.imacron = 278;
     t.Euro = 500;
   });
-  // eslint-disable-next-line no-shadow
+
   t["Times-Italic"] = getLookupTableFactory(function (t) {
     t.space = 250;
     t.exclam = 333;
@@ -2760,7 +2760,7 @@ const getMetrics = getLookupTableFactory(function (t) {
     t.imacron = 278;
     t.Euro = 500;
   });
-  // eslint-disable-next-line no-shadow
+
   t.ZapfDingbats = getLookupTableFactory(function (t) {
     t.space = 278;
     t.a1 = 974;

@@ -77,7 +77,7 @@ function decodeInteger(contextCache, procedure, decoder) {
 
   const sign = readBits(1);
   // prettier-ignore
-  /* eslint-disable no-nested-ternary */
+
   const value = readBits(1) ?
                   (readBits(1) ?
                     (readBits(1) ?
@@ -89,7 +89,7 @@ function decodeInteger(contextCache, procedure, decoder) {
                     readBits(6) + 20) :
                   readBits(4) + 4) :
                 readBits(2);
-  /* eslint-enable no-nested-ternary */
+
   let signedValue;
   if (sign === 0) {
     signedValue = value;
@@ -1496,7 +1496,6 @@ function processSegment(segment, visitor) {
   }
   const callbackName = "on" + header.typeName;
   if (callbackName in visitor) {
-    // eslint-disable-next-line prefer-spread
     visitor[callbackName].apply(visitor, args);
   }
 }

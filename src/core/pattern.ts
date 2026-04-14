@@ -46,7 +46,6 @@ const ShadingType = {
 };
 
 class Pattern {
-  // eslint-disable-next-line no-unused-private-class-members
   static #hasGPU = false;
 
   constructor() {

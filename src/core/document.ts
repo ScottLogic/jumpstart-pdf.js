@@ -579,7 +579,7 @@ class Page {
 
     // Fetch the page's annotations and add their operator lists to the
     // page's operator list to render them.
-    // eslint-disable-next-line prefer-const
+
     let [pageOpList, annotations, newAnnotations] = await Promise.all([
       pageListPromise,
       this._parsedAnnotations,

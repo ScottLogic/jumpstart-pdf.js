@@ -135,7 +135,7 @@ function compileFontInfo(font) {
     boolBit = 0;
   for (let i = 0; i < numBools; i++) {
     const value = font[FONT_INFO.bools[i]];
-    // eslint-disable-next-line no-nested-ternary
+
     const bits = value === undefined ? 0x00 : value ? 0x02 : 0x01;
     boolByte |= bits << boolBit;
     boolBit += 2;

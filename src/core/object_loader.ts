@@ -144,7 +144,7 @@ class ObjectLoader {
     if (xref.stream.isDataLoaded) {
       return;
     }
-    // eslint-disable-next-line no-restricted-syntax
+
     const objLoader = new ObjectLoader(obj, keys, xref);
     await objLoader.load();
   }

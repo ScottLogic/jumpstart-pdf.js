@@ -17,7 +17,7 @@
 /** @typedef {import("../document.js").Page} Page */
 /** @typedef {import("../xref.js").XRef} XRef */
 /** @typedef {import("../worker.js").WorkerTask} WorkerTask */
-// eslint-disable-next-line max-len
+
 /** @typedef {import("../../shared/message_handler.js").MessageHandler} MessageHandler */
 
 import {

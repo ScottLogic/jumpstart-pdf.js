@@ -40,7 +40,6 @@ class Name {
   }
 
   static get(name) {
-    // eslint-disable-next-line no-restricted-syntax
     return (NameCache[name] ||= new Name(name));
   }
 }
@@ -57,7 +56,6 @@ class Cmd {
   }
 
   static get(cmd) {
-    // eslint-disable-next-line no-restricted-syntax
     return (CmdCache[cmd] ||= new Cmd(cmd));
   }
 }
@@ -314,7 +312,6 @@ class Ref {
       return null;
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     return (RefCache[str] = new Ref(
       parseInt(m[1]),
       !m[2] ? 0 : parseInt(m[2])
@@ -323,7 +320,7 @@ class Ref {
 
   static get(num, gen) {
     const key = gen === 0 ? `${num}R` : `${num}R${gen}`;
-    // eslint-disable-next-line no-restricted-syntax
+
     return (RefCache[key] ||= new Ref(num, gen));
   }
 }
