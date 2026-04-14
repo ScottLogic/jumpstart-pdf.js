@@ -15,24 +15,37 @@
 
 import { assert, unreachable } from "./util.js";
 
+type PDFStreamReaderConstructor = new (
+  stream: BasePDFStream
+) => BasePDFStreamReader;
+type PDFStreamRangeReaderConstructor = new (
+  stream: BasePDFStream,
+  begin: number,
+  end: number
+) => BasePDFStreamRangeReader;
+
 /**
  * Interface that represents PDF data transport. If possible, it allows
  * progressively load entire or fragment of the PDF binary data.
  */
 class BasePDFStream {
-  #PDFStreamReader = null;
+  #PDFStreamReader: PDFStreamReaderConstructor | null = null;
 
-  #PDFStreamRangeReader = null;
+  #PDFStreamRangeReader: PDFStreamRangeReaderConstructor | null = null;
 
-  _fullReader = null;
+  _fullReader: BasePDFStreamReader | null = null;
 
-  _rangeReaders = new Set();
+  _rangeReaders = new Set<BasePDFStreamRangeReader>();
 
-  _source = null;
+  _source: unknown = null;
 
-  constructor(source, PDFStreamReader, PDFStreamRangeReader) {
+  constructor(
+    source: unknown,
+    PDFStreamReader: PDFStreamReaderConstructor,
+    PDFStreamRangeReader: PDFStreamRangeReaderConstructor
+  ) {
     if (
-      (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) &&
+      (typeof PDFJSDev === "undefined" || PDFJSDev!.test("TESTING")) &&
       this.constructor === BasePDFStream
     ) {
       unreachable("Cannot initialize BasePDFStream.");
@@ -56,7 +69,7 @@ class BasePDFStream {
       !this._fullReader,
       "BasePDFStream.getFullReader can only be called once."
     );
-    return (this._fullReader = new this.#PDFStreamReader(this));
+    return (this._fullReader = new this.#PDFStreamReader!(this));
   }
 
   /**
@@ -69,11 +82,11 @@ class BasePDFStream {
    * @param {number} end - the end offset of the data.
    * @returns {BasePDFStreamRangeReader}
    */
-  getRangeReader(begin, end) {
+  getRangeReader(begin: number, end: number) {
     if (end <= this._progressiveDataLength) {
       return null;
     }
-    const reader = new this.#PDFStreamRangeReader(this, begin, end);
+    const reader = new this.#PDFStreamRangeReader!(this, begin, end);
     this._rangeReaders.add(reader);
     return reader;
   }
@@ -82,7 +95,7 @@ class BasePDFStream {
    * Cancels all opened reader and closes all their opened requests.
    * @param {Object} reason - the reason for cancelling
    */
-  cancelAllRequests(reason) {
+  cancelAllRequests(reason: unknown) {
     this._fullReader?.cancel(reason);
 
     // Always create a copy of the rangeReaders.
@@ -102,13 +115,14 @@ class BasePDFStreamReader {
    * The callback is called with one parameter: an object with the loaded and
    * total properties.
    */
-  onProgress = null;
+  onProgress: ((progress: { loaded: number; total: number }) => void) | null =
+    null;
 
   _contentLength = 0;
 
-  _filename = null;
+  _filename: string | null = null;
 
-  _headersCapability = Promise.withResolvers();
+  _headersCapability = Promise.withResolvers<void>();
 
   _isRangeSupported = false;
 
@@ -116,11 +130,11 @@ class BasePDFStreamReader {
 
   _loaded = 0;
 
-  _stream = null;
+  _stream: BasePDFStream | null = null;
 
-  constructor(stream) {
+  constructor(stream: BasePDFStream) {
     if (
-      (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) &&
+      (typeof PDFJSDev === "undefined" || PDFJSDev!.test("TESTING")) &&
       this.constructor === BasePDFStreamReader
     ) {
       unreachable("Cannot initialize BasePDFStreamReader.");
@@ -187,7 +201,7 @@ class BasePDFStreamReader {
    * set to true.
    * @returns {Promise}
    */
-  async read() {
+  async read(): Promise<never> {
     unreachable("Abstract method `read` called");
   }
 
@@ -195,7 +209,7 @@ class BasePDFStreamReader {
    * Cancels all pending read requests and closes the stream.
    * @param {Object} reason
    */
-  cancel(reason) {
+  cancel(_reason: unknown): void {
     unreachable("Abstract method `cancel` called");
   }
 }
@@ -204,11 +218,11 @@ class BasePDFStreamReader {
  * Interface for a PDF binary data fragment reader.
  */
 class BasePDFStreamRangeReader {
-  _stream = null;
+  _stream: BasePDFStream | null = null;
 
-  constructor(stream, begin, end) {
+  constructor(stream: BasePDFStream, _begin: number, _end: number) {
     if (
-      (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) &&
+      (typeof PDFJSDev === "undefined" || PDFJSDev!.test("TESTING")) &&
       this.constructor === BasePDFStreamRangeReader
     ) {
       unreachable("Cannot initialize BasePDFStreamRangeReader.");
@@ -224,7 +238,7 @@ class BasePDFStreamRangeReader {
    * set to true.
    * @returns {Promise}
    */
-  async read() {
+  async read(): Promise<never> {
     unreachable("Abstract method `read` called");
   }
 
@@ -232,7 +246,7 @@ class BasePDFStreamRangeReader {
    * Cancels all pending read requests and closes the stream.
    * @param {Object} reason
    */
-  cancel(reason) {
+  cancel(_reason: unknown): void {
     unreachable("Abstract method `cancel` called");
   }
 }

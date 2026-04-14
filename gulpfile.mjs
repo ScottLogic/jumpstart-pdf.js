@@ -314,9 +314,11 @@ function createWebpackConfig(
     /node_modules[\\/]core-js/,
   ];
 
-  const babelPresets = skipBabel
-    ? undefined
-    : [["@babel/preset-env", BABEL_PRESET_ENV_OPTS]];
+  const babelPresets = [
+    ...(skipBabel ? [] : [["@babel/preset-env", BABEL_PRESET_ENV_OPTS]]),
+    // Always strip TypeScript syntax, even when skipping Babel transpilation.
+    ["@babel/preset-typescript"],
+  ];
   const babelPlugins = [
     [
       babelPluginPDFJSPreprocessor,
@@ -404,6 +406,13 @@ function createWebpackConfig(
     plugins,
     resolve: {
       alias,
+      // When a .js import is encountered, also try the .ts equivalent.
+      // This mirrors TypeScript's `moduleResolution: "bundler"` behaviour and
+      // means we never have to update import statements as files are converted.
+      extensionAlias: {
+        ".js": [".ts", ".js"],
+        ".mjs": [".mts", ".mjs"],
+      },
     },
     devtool: enableSourceMaps ? "source-map" : undefined,
     module: {
@@ -415,7 +424,7 @@ function createWebpackConfig(
       },
       rules: [
         {
-          test: /\.[mc]?js$/,
+          test: /\.[mc]?[jt]s$/,
           loader: "babel-loader",
           exclude: babelExcludeRegExp,
           options: {

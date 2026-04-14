@@ -23,13 +23,18 @@ const MASK_HIGH = 0xffff0000;
 const MASK_LOW = 0xffff;
 
 class MurmurHash3_64 {
-  constructor(seed) {
+  h1: number;
+
+  h2: number;
+
+  constructor(seed?: number) {
     this.h1 = seed ? seed & 0xffffffff : SEED;
     this.h2 = seed ? seed & 0xffffffff : SEED;
   }
 
-  update(input) {
-    let data, length;
+  update(input: string | ArrayBufferView): void {
+    let data: Uint8Array;
+    let length: number;
     if (typeof input === "string") {
       data = new Uint8Array(input.length * 2);
       length = 0;
@@ -43,7 +48,15 @@ class MurmurHash3_64 {
         }
       }
     } else if (ArrayBuffer.isView(input)) {
-      data = input.slice();
+      // Copy into a fresh Uint8Array with byteOffset=0 so that the
+      // subsequent `new Uint32Array(data.buffer, 0, ...)` reads from the
+      // correct position regardless of the input's own byteOffset.
+      data = new Uint8Array(
+        input.buffer.slice(
+          input.byteOffset,
+          input.byteOffset + input.byteLength
+        )
+      );
       length = data.byteLength;
     } else {
       throw new Error("Invalid data format, must be a string or TypedArray.");

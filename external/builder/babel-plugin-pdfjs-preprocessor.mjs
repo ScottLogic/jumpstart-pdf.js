@@ -4,6 +4,11 @@ import vm from "vm";
 const PDFJS_PREPROCESSOR_NAME = "PDFJSDev";
 
 function isPDFJSPreprocessor(obj) {
+  // TypeScript non-null assertion (PDFJSDev!) wraps the identifier in a
+  // TSNonNullExpression node — unwrap it transparently.
+  if (obj.type === "TSNonNullExpression") {
+    return isPDFJSPreprocessor(obj.expression);
+  }
   return obj.type === "Identifier" && obj.name === PDFJS_PREPROCESSOR_NAME;
 }
 

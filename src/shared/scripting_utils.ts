@@ -22,49 +22,49 @@
 
 import { MathClamp } from "../shared/math_clamp.js";
 
-function makeColorComp(n) {
+function makeColorComp(n: number): string {
   return Math.floor(MathClamp(n, 0, 1) * 255)
     .toString(16)
     .padStart(2, "0");
 }
 
-function scaleAndClamp(x) {
+function scaleAndClamp(x: number): number {
   return MathClamp(x, 0, 1) * 255;
 }
 
 // PDF specifications section 10.3
 class ColorConverters {
-  static CMYK_G([c, y, m, k]) {
+  static CMYK_G([c, y, m, k]: number[]) {
     return ["G", 1 - Math.min(1, 0.3 * c + 0.59 * m + 0.11 * y + k)];
   }
 
-  static G_CMYK([g]) {
+  static G_CMYK([g]: number[]) {
     return ["CMYK", 0, 0, 0, 1 - g];
   }
 
-  static G_RGB([g]) {
+  static G_RGB([g]: number[]) {
     return ["RGB", g, g, g];
   }
 
-  static G_rgb([g]) {
+  static G_rgb([g]: number[]) {
     g = scaleAndClamp(g);
     return [g, g, g];
   }
 
-  static G_HTML([g]) {
+  static G_HTML([g]: number[]) {
     const G = makeColorComp(g);
     return `#${G}${G}${G}`;
   }
 
-  static RGB_G([r, g, b]) {
+  static RGB_G([r, g, b]: number[]) {
     return ["G", 0.3 * r + 0.59 * g + 0.11 * b];
   }
 
-  static RGB_rgb(color) {
+  static RGB_rgb(color: number[]) {
     return color.map(scaleAndClamp);
   }
 
-  static RGB_HTML(color) {
+  static RGB_HTML(color: number[]) {
     return `#${color.map(makeColorComp).join("")}`;
   }
 
@@ -76,7 +76,7 @@ class ColorConverters {
     return [null];
   }
 
-  static CMYK_RGB([c, y, m, k]) {
+  static CMYK_RGB([c, y, m, k]: number[]) {
     return [
       "RGB",
       1 - Math.min(1, c + k),
@@ -85,7 +85,7 @@ class ColorConverters {
     ];
   }
 
-  static CMYK_rgb([c, y, m, k]) {
+  static CMYK_rgb([c, y, m, k]: number[]) {
     return [
       scaleAndClamp(1 - Math.min(1, c + k)),
       scaleAndClamp(1 - Math.min(1, m + k)),
@@ -93,12 +93,12 @@ class ColorConverters {
     ];
   }
 
-  static CMYK_HTML(components) {
-    const rgb = this.CMYK_RGB(components).slice(1);
+  static CMYK_HTML(components: number[]) {
+    const rgb = this.CMYK_RGB(components).slice(1) as number[];
     return this.RGB_HTML(rgb);
   }
 
-  static RGB_CMYK([r, g, b]) {
+  static RGB_CMYK([r, g, b]: number[]) {
     const c = 1 - r;
     const m = 1 - g;
     const y = 1 - b;

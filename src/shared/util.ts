@@ -12,18 +12,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* globals process */
 
 // NW.js / Electron is a browser context, but copies some Node.js objects; see
 // http://docs.nwjs.io/en/latest/For%20Users/Advanced/JavaScript%20Contexts%20in%20NW.js/#access-nodejs-and-nwjs-api-in-browser-context
 // https://www.electronjs.org/docs/api/process#processversionselectron-readonly
 // https://www.electronjs.org/docs/api/process#processtype-readonly
 const isNodeJS =
-  (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) &&
+  (typeof PDFJSDev === "undefined" || PDFJSDev!.test("GENERIC")) &&
   typeof process === "object" &&
   process + "" === "[object process]" &&
-  !process.versions.nw &&
-  !(process.versions.electron && process.type && process.type !== "browser");
+  !process.versions["nw"] &&
+  !(process.versions["electron"] && process.type && process.type !== "browser");
 
 const FONT_IDENTITY_MATRIX = [0.001, 0, 0, 0.001, 0, 0];
 
@@ -57,14 +56,14 @@ const RenderingIntentFlag = {
   ANNOTATIONS_DISABLE: 0x40,
   IS_EDITING: 0x80,
   OPLIST: 0x100,
-};
+} as const;
 
 const AnnotationMode = {
   DISABLE: 0,
   ENABLE: 1,
   ENABLE_FORMS: 2,
   ENABLE_STORAGE: 3,
-};
+} as const;
 
 const AnnotationEditorPrefix = "pdfjs_internal_editor_";
 
@@ -78,7 +77,7 @@ const AnnotationEditorType = {
   POPUP: 16,
   SIGNATURE: 101,
   COMMENT: 102,
-};
+} as const;
 
 const AnnotationEditorParamsType = {
   RESIZE: 1,
@@ -94,7 +93,7 @@ const AnnotationEditorParamsType = {
   HIGHLIGHT_FREE: 33,
   HIGHLIGHT_SHOW_ALL: 34,
   DRAW_STEP: 41,
-};
+} as const;
 
 // Permission flags from Table 22, Section 7.6.3.2 of the PDF specification.
 const PermissionFlag = {
@@ -106,13 +105,13 @@ const PermissionFlag = {
   COPY_FOR_ACCESSIBILITY: 0x200,
   ASSEMBLE: 0x400,
   PRINT_HIGH_QUALITY: 0x800,
-};
+} as const;
 
 const MeshFigureType = {
   TRIANGLES: 1,
   LATTICE: 2,
   PATCH: 3,
-};
+} as const;
 
 const TextRenderingMode = {
   FILL: 0,
@@ -125,13 +124,13 @@ const TextRenderingMode = {
   ADD_TO_PATH: 7,
   FILL_STROKE_MASK: 3,
   ADD_TO_PATH_FLAG: 4,
-};
+} as const;
 
 const ImageKind = {
   GRAYSCALE_1BPP: 1,
   RGB_24BPP: 2,
   RGBA_32BPP: 3,
-};
+} as const;
 
 const AnnotationType = {
   TEXT: 1,
@@ -160,12 +159,12 @@ const AnnotationType = {
   WATERMARK: 24,
   THREED: 25,
   REDACT: 26,
-};
+} as const;
 
 const AnnotationReplyType = {
   GROUP: "Group",
   REPLY: "R",
-};
+} as const;
 
 const AnnotationFlag = {
   INVISIBLE: 0x01,
@@ -178,7 +177,7 @@ const AnnotationFlag = {
   LOCKED: 0x80,
   TOGGLENOVIEW: 0x100,
   LOCKEDCONTENTS: 0x200,
-};
+} as const;
 
 const AnnotationFieldFlag = {
   READONLY: 0x0000001,
@@ -200,7 +199,7 @@ const AnnotationFieldFlag = {
   RICHTEXT: 0x2000000,
   RADIOSINUNISON: 0x2000000,
   COMMITONSELCHANGE: 0x4000000,
-};
+} as const;
 
 const AnnotationBorderStyleType = {
   SOLID: 1,
@@ -208,7 +207,7 @@ const AnnotationBorderStyleType = {
   BEVELED: 3,
   INSET: 4,
   UNDERLINE: 5,
-};
+} as const;
 
 const AnnotationActionEventType = {
   E: "Mouse Enter",
@@ -225,7 +224,7 @@ const AnnotationActionEventType = {
   F: "Format",
   V: "Validate",
   C: "Calculate",
-};
+} as const;
 
 const DocumentActionEventType = {
   WC: "WillClose",
@@ -233,18 +232,18 @@ const DocumentActionEventType = {
   DS: "DidSave",
   WP: "WillPrint",
   DP: "DidPrint",
-};
+} as const;
 
 const PageActionEventType = {
   O: "PageOpen",
   C: "PageClose",
-};
+} as const;
 
 const VerbosityLevel = {
   ERRORS: 0,
   WARNINGS: 1,
   INFOS: 5,
-};
+} as const;
 
 // All the possible operations for an operator list.
 const OPS = {
@@ -346,7 +345,7 @@ const OPS = {
   setStrokeTransparent: 92,
   setFillTransparent: 93,
   rawFillPath: 94,
-};
+} as const;
 
 // In order to have a switch statement that is fast (i.e. which use a jump
 // table), we need to have the OPS in a contiguous range.
@@ -356,29 +355,29 @@ const DrawOPS = {
   curveTo: 2,
   quadraticCurveTo: 3,
   closePath: 4,
-};
+} as const;
 
 const PasswordResponses = {
   NEED_PASSWORD: 1,
   INCORRECT_PASSWORD: 2,
-};
+} as const;
 
-let verbosity = VerbosityLevel.WARNINGS;
+let verbosity: number = VerbosityLevel.WARNINGS;
 
-function setVerbosityLevel(level) {
+function setVerbosityLevel(level: number): void {
   if (Number.isInteger(level)) {
     verbosity = level;
   }
 }
 
-function getVerbosityLevel() {
+function getVerbosityLevel(): number {
   return verbosity;
 }
 
 // A notice for devs. These are good for things that are helpful to devs, such
 // as warning that Workers were disabled, which is important to devs but not
 // end users.
-function info(msg) {
+function info(msg: string): void {
   if (verbosity >= VerbosityLevel.INFOS) {
     // eslint-disable-next-line no-console
     console.info(`Info: ${msg}`);
@@ -386,25 +385,25 @@ function info(msg) {
 }
 
 // Non-fatal warnings.
-function warn(msg) {
+function warn(msg: string): void {
   if (verbosity >= VerbosityLevel.WARNINGS) {
     // eslint-disable-next-line no-console
     console.warn(`Warning: ${msg}`);
   }
 }
 
-function unreachable(msg) {
+function unreachable(msg: string): never {
   throw new Error(msg);
 }
 
-function assert(cond, msg) {
+function assert(cond: unknown, msg: string): asserts cond {
   if (!cond) {
     unreachable(msg);
   }
 }
 
 // Checks if URLs use one of the allowed protocols, e.g. to avoid XSS.
-function _isValidProtocol(url) {
+function _isValidProtocol(url: URL | null | undefined): boolean {
   switch (url?.protocol) {
     case "http:":
     case "https:":
@@ -417,15 +416,24 @@ function _isValidProtocol(url) {
   }
 }
 
+type CreateValidAbsoluteUrlOptions = {
+  addDefaultProtocol?: boolean;
+  tryConvertEncoding?: boolean;
+};
+
 /**
  * Attempts to create a valid absolute URL.
  *
- * @param {URL|string} url - An absolute, or relative, URL.
- * @param {URL|string} [baseUrl] - An absolute URL.
- * @param {Object} [options]
- * @returns Either a valid {URL}, or `null` otherwise.
+ * @param url - An absolute, or relative, URL.
+ * @param baseUrl - An absolute URL.
+ * @param options
+ * @returns Either a valid URL, or `null` otherwise.
  */
-function createValidAbsoluteUrl(url, baseUrl = null, options = null) {
+function createValidAbsoluteUrl(
+  url: URL | string,
+  baseUrl: URL | string | null = null,
+  options: CreateValidAbsoluteUrlOptions | null = null
+): URL | null {
   if (!url) {
     return null;
   }
@@ -435,7 +443,7 @@ function createValidAbsoluteUrl(url, baseUrl = null, options = null) {
       const dots = url.match(/\./g);
       // Avoid accidentally matching a *relative* URL pointing to a file named
       // e.g. "www.pdf" or similar.
-      if (dots?.length >= 2) {
+      if ((dots?.length ?? 0) >= 2) {
         url = `http://${url}`;
       }
     }
@@ -456,12 +464,16 @@ function createValidAbsoluteUrl(url, baseUrl = null, options = null) {
 /**
  * Remove, or replace, the hash property of the URL.
  *
- * @param {URL|string} url - The absolute, or relative, URL.
- * @param {string} hash - The hash property (use an empty string to remove it).
- * @param {boolean} [allowRel] - Allow relative URLs.
- * @returns {string} The resulting URL string.
+ * @param url - The absolute, or relative, URL.
+ * @param hash - The hash property (use an empty string to remove it).
+ * @param allowRel - Allow relative URLs.
+ * @returns The resulting URL string.
  */
-function updateUrlHash(url, hash, allowRel = false) {
+function updateUrlHash(
+  url: URL | string,
+  hash: string,
+  allowRel = false
+): string {
   const res = URL.parse(url);
   if (res) {
     res.hash = hash;
@@ -470,20 +482,25 @@ function updateUrlHash(url, hash, allowRel = false) {
   // Support well-formed relative URLs, necessary for `web/app.js` in GENERIC
   // builds, by optionally falling back to string parsing.
   if (allowRel && createValidAbsoluteUrl(url, "http://example.com")) {
-    return url.split("#", 1)[0] + `${hash ? `#${hash}` : ""}`;
+    return url.toString().split("#", 1)[0] + `${hash ? `#${hash}` : ""}`;
   }
   return "";
 }
 
 // Extract the final component from a path string.
-function stripPath(str) {
+function stripPath(str: string): string {
   return str.substring(str.lastIndexOf("/") + 1);
 }
 
-function shadow(obj, prop, value, nonSerializable = false) {
-  if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
+function shadow<T>(
+  obj: object,
+  prop: PropertyKey,
+  value: T,
+  nonSerializable = false
+): T {
+  if (typeof PDFJSDev === "undefined" || PDFJSDev!.test("TESTING")) {
     assert(
-      prop in obj,
+      prop in (obj as Record<PropertyKey, unknown>),
       `shadow: Property "${prop && prop.toString()}" not found in object.`
     );
   }
@@ -496,49 +513,63 @@ function shadow(obj, prop, value, nonSerializable = false) {
   return value;
 }
 
-/**
- * @type {any}
- */
-const BaseException = (function BaseExceptionClosure() {
-  // eslint-disable-next-line no-shadow
-  function BaseException(message, name) {
-    if (
-      (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) &&
-      this.constructor === BaseException
-    ) {
-      unreachable("Cannot initialize BaseException.");
-    }
-    this.message = message;
-    this.name = name;
-  }
-  BaseException.prototype = new Error();
-  BaseException.constructor = BaseException;
+abstract class BaseException implements Error {
+  name: string;
 
-  return BaseException;
-})();
+  message: string;
+
+  stack: string | undefined;
+
+  constructor(message: string, name: string) {
+    this.name = name;
+    this.message = message;
+    // Capture the stack trace without relying on `extends Error`, since that
+    // adds [[ErrorData]] to instances which breaks structured-clone across
+    // worker boundaries (the HTML spec replaces non-standard Error names with
+    // "Error" during structured serialisation, making wrapReason fail).
+    // Object.setPrototypeOf below wires up instanceof Error without the slot.
+    // Use defineProperty to bypass Error.prototype's `stack` setter (which can
+    // throw a TypeError in Firefox strict-mode modules after setPrototypeOf).
+    Object.defineProperty(this, "stack", {
+      value: new Error(message).stack,
+      configurable: true,
+      writable: true,
+    });
+  }
+}
+// Make `instanceof Error` work without conferring [[ErrorData]] on instances.
+Object.setPrototypeOf(BaseException.prototype, Error.prototype);
 
 class PasswordException extends BaseException {
-  constructor(msg, code) {
+  code: number;
+
+  constructor(msg: string, code: number) {
     super(msg, "PasswordException");
     this.code = code;
   }
 }
 
 class UnknownErrorException extends BaseException {
-  constructor(msg, details) {
+  details: unknown;
+
+  constructor(msg: string, details: unknown) {
     super(msg, "UnknownErrorException");
     this.details = details;
   }
 }
 
 class InvalidPDFException extends BaseException {
-  constructor(msg) {
+  constructor(msg: string) {
     super(msg, "InvalidPDFException");
   }
 }
 
 class ResponseException extends BaseException {
-  constructor(msg, status, missing) {
+  status: number;
+
+  missing: boolean;
+
+  constructor(msg: string, status: number, missing: boolean) {
     super(msg, "ResponseException");
     this.status = status;
     this.missing = missing;
@@ -549,7 +580,7 @@ class ResponseException extends BaseException {
  * Error caused during parsing PDF data.
  */
 class FormatError extends BaseException {
-  constructor(msg) {
+  constructor(msg: string) {
     super(msg, "FormatError");
   }
 }
@@ -558,30 +589,30 @@ class FormatError extends BaseException {
  * Error used to indicate task cancellation.
  */
 class AbortException extends BaseException {
-  constructor(msg) {
+  constructor(msg: string) {
     super(msg, "AbortException");
   }
 }
 
-function bytesToString(bytes) {
+function bytesToString(bytes: Uint8Array): string {
   if (typeof bytes !== "object" || bytes?.length === undefined) {
     unreachable("Invalid argument for bytesToString");
   }
   const length = bytes.length;
   const MAX_ARGUMENT_COUNT = 8192;
   if (length < MAX_ARGUMENT_COUNT) {
-    return String.fromCharCode.apply(null, bytes);
+    return String.fromCharCode.apply(null, bytes as unknown as number[]);
   }
   const strBuf = [];
   for (let i = 0; i < length; i += MAX_ARGUMENT_COUNT) {
     const chunkEnd = Math.min(i + MAX_ARGUMENT_COUNT, length);
     const chunk = bytes.subarray(i, chunkEnd);
-    strBuf.push(String.fromCharCode.apply(null, chunk));
+    strBuf.push(String.fromCharCode.apply(null, chunk as unknown as number[]));
   }
   return strBuf.join("");
 }
 
-function stringToBytes(str) {
+function stringToBytes(str: string): Uint8Array {
   if (typeof str !== "string") {
     unreachable("Invalid argument for stringToBytes");
   }
@@ -593,8 +624,8 @@ function stringToBytes(str) {
   return bytes;
 }
 
-function string32(value) {
-  if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
+function string32(value: number): string {
+  if (typeof PDFJSDev === "undefined" || PDFJSDev!.test("TESTING")) {
     assert(
       typeof value === "number" && Math.abs(value) < 2 ** 32,
       `string32: Unexpected input "${value}".`
@@ -608,12 +639,12 @@ function string32(value) {
   );
 }
 
-function objectSize(obj) {
+function objectSize(obj: object): number {
   return Object.keys(obj).length;
 }
 
 // Checks the endianness of the platform.
-function isLittleEndian() {
+function isLittleEndian(): boolean {
   const buffer8 = new Uint8Array(4);
   buffer8[0] = 1;
   const view32 = new Uint32Array(buffer8.buffer, 0, 1);
@@ -621,11 +652,11 @@ function isLittleEndian() {
 }
 
 class FeatureTest {
-  static get isLittleEndian() {
+  static get isLittleEndian(): boolean {
     return shadow(this, "isLittleEndian", isLittleEndian());
   }
 
-  static get isOffscreenCanvasSupported() {
+  static get isOffscreenCanvasSupported(): boolean {
     return shadow(
       this,
       "isOffscreenCanvasSupported",
@@ -633,7 +664,7 @@ class FeatureTest {
     );
   }
 
-  static get isImageDecoderSupported() {
+  static get isImageDecoderSupported(): boolean {
     return shadow(
       this,
       "isImageDecoderSupported",
@@ -641,7 +672,7 @@ class FeatureTest {
     );
   }
 
-  static get isFloat16ArraySupported() {
+  static get isFloat16ArraySupported(): boolean {
     return shadow(
       this,
       "isFloat16ArraySupported",
@@ -649,16 +680,22 @@ class FeatureTest {
     );
   }
 
-  static get isSanitizerSupported() {
+  static get isSanitizerSupported(): boolean {
     return shadow(
       this,
       "isSanitizerSupported",
-      // eslint-disable-next-line no-undef
+
       typeof Sanitizer !== "undefined"
     );
   }
 
-  static get platform() {
+  static get platform(): {
+    isAndroid: boolean;
+    isLinux: boolean;
+    isMac: boolean;
+    isWindows: boolean;
+    isFirefox: boolean;
+  } {
     const { platform, userAgent } = navigator;
 
     return shadow(this, "platform", {
@@ -667,12 +704,12 @@ class FeatureTest {
       isMac: platform.includes("Mac"),
       isWindows: platform.includes("Win"),
       isFirefox:
-        (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) ||
+        (typeof PDFJSDev !== "undefined" && PDFJSDev!.test("MOZCENTRAL")) ||
         userAgent.includes("Firefox"),
     });
   }
 
-  static get isCSSRoundSupported() {
+  static get isCSSRoundSupported(): boolean {
     return shadow(
       this,
       "isCSSRoundSupported",
@@ -686,18 +723,18 @@ const hexNumbers = Array.from(Array(256).keys(), n =>
 );
 
 class Util {
-  static makeHexColor(r, g, b) {
+  static makeHexColor(r: number, g: number, b: number): string {
     return `#${hexNumbers[r]}${hexNumbers[g]}${hexNumbers[b]}`;
   }
 
-  static domMatrixToTransform(dm) {
+  static domMatrixToTransform(dm: DOMMatrix): number[] {
     return [dm.a, dm.b, dm.c, dm.d, dm.e, dm.f];
   }
 
   // Apply a scaling matrix to some min/max values.
   // If a scaling factor is negative then min and max must be
   // swapped.
-  static scaleMinMax(transform, minMax) {
+  static scaleMinMax(transform: number[], minMax: number[]): void {
     let temp;
     if (transform[0]) {
       if (transform[0] < 0) {
@@ -746,7 +783,7 @@ class Util {
   }
 
   // Concatenates two transformation matrices together and returns the result.
-  static transform(m1, m2) {
+  static transform(m1: number[], m2: number[]): number[] {
     return [
       m1[0] * m2[0] + m1[2] * m2[1],
       m1[1] * m2[0] + m1[3] * m2[1],
@@ -758,7 +795,7 @@ class Util {
   }
 
   // Multiplies m (an array-based transform) by md (a DOMMatrix transform).
-  static multiplyByDOMMatrix(m, md) {
+  static multiplyByDOMMatrix(m: number[], md: DOMMatrix): number[] {
     return [
       m[0] * md.a + m[2] * md.b,
       m[1] * md.a + m[3] * md.b,
@@ -770,14 +807,18 @@ class Util {
   }
 
   // For 2d affine transforms
-  static applyTransform(p, m, pos = 0) {
+  static applyTransform(p: number[], m: number[], pos = 0): void {
     const p0 = p[pos];
     const p1 = p[pos + 1];
     p[pos] = p0 * m[0] + p1 * m[2] + m[4];
     p[pos + 1] = p0 * m[1] + p1 * m[3] + m[5];
   }
 
-  static applyTransformToBezier(p, transform, pos = 0) {
+  static applyTransformToBezier(
+    p: number[],
+    transform: number[],
+    pos = 0
+  ): void {
     const m0 = transform[0];
     const m1 = transform[1];
     const m2 = transform[2];
@@ -792,7 +833,7 @@ class Util {
     }
   }
 
-  static applyInverseTransform(p, m) {
+  static applyInverseTransform(p: number[], m: number[]): void {
     const p0 = p[0];
     const p1 = p[1];
     const d = m[0] * m[3] - m[1] * m[2];
@@ -802,7 +843,11 @@ class Util {
 
   // Applies the transform to the rectangle and finds the minimum axially
   // aligned bounding box.
-  static axialAlignedBoundingBox(rect, transform, output) {
+  static axialAlignedBoundingBox(
+    rect: number[],
+    transform: number[],
+    output: number[]
+  ): void {
     const m0 = transform[0];
     const m1 = transform[1];
     const m2 = transform[2];
@@ -845,7 +890,7 @@ class Util {
     output[3] = Math.max(output[3], b0, b1, b2, b3);
   }
 
-  static inverseTransform(m) {
+  static inverseTransform(m: number[]): number[] {
     const d = m[0] * m[3] - m[1] * m[2];
     return [
       m[3] / d,
@@ -860,7 +905,10 @@ class Util {
   // This calculation uses Singular Value Decomposition.
   // The SVD can be represented with formula A = USV. We are interested in the
   // matrix S here because it represents the scale values.
-  static singularValueDecompose2dScale(matrix, output) {
+  static singularValueDecompose2dScale(
+    matrix: number[],
+    output: number[]
+  ): void {
     const m0 = matrix[0];
     const m1 = matrix[1];
     const m2 = matrix[2];
@@ -881,7 +929,7 @@ class Util {
   // For coordinate systems whose origin lies in the bottom-left, this
   // means normalization to (BL,TR) ordering. For systems with origin in the
   // top-left, this means (TL,BR) ordering.
-  static normalizeRect(rect) {
+  static normalizeRect(rect: number[]): number[] {
     const r = rect.slice(0); // clone rect
     if (rect[0] > rect[2]) {
       r[0] = rect[2];
@@ -897,7 +945,7 @@ class Util {
   // Returns a rectangle [x1, y1, x2, y2] corresponding to the
   // intersection of rect1 and rect2. If no intersection, returns 'null'
   // The rectangle coordinates of rect1, rect2 should be [x1, y1, x2, y2]
-  static intersect(rect1, rect2) {
+  static intersect(rect1: number[], rect2: number[]): number[] | null {
     const xLow = Math.max(
       Math.min(rect1[0], rect1[2]),
       Math.min(rect2[0], rect2[2])
@@ -924,21 +972,38 @@ class Util {
     return [xLow, yLow, xHigh, yHigh];
   }
 
-  static pointBoundingBox(x, y, minMax) {
+  static pointBoundingBox(x: number, y: number, minMax: number[]): void {
     minMax[0] = Math.min(minMax[0], x);
     minMax[1] = Math.min(minMax[1], y);
     minMax[2] = Math.max(minMax[2], x);
     minMax[3] = Math.max(minMax[3], y);
   }
 
-  static rectBoundingBox(x0, y0, x1, y1, minMax) {
+  static rectBoundingBox(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    minMax: number[]
+  ): void {
     minMax[0] = Math.min(minMax[0], x0, x1);
     minMax[1] = Math.min(minMax[1], y0, y1);
     minMax[2] = Math.max(minMax[2], x0, x1);
     minMax[3] = Math.max(minMax[3], y0, y1);
   }
 
-  static #getExtremumOnCurve(x0, x1, x2, x3, y0, y1, y2, y3, t, minMax) {
+  static #getExtremumOnCurve(
+    x0: number,
+    x1: number,
+    x2: number,
+    x3: number,
+    y0: number,
+    y1: number,
+    y2: number,
+    y3: number,
+    t: number,
+    minMax: number[]
+  ): void {
     if (t <= 0 || t >= 1) {
       return;
     }
@@ -953,7 +1018,20 @@ class Util {
     minMax[3] = Math.max(minMax[3], y);
   }
 
-  static #getExtremum(x0, x1, x2, x3, y0, y1, y2, y3, a, b, c, minMax) {
+  static #getExtremum(
+    x0: number,
+    x1: number,
+    x2: number,
+    x3: number,
+    y0: number,
+    y1: number,
+    y2: number,
+    y3: number,
+    a: number,
+    b: number,
+    c: number,
+    minMax: number[]
+  ): void {
     if (Math.abs(a) < 1e-12) {
       if (Math.abs(b) >= 1e-12) {
         this.#getExtremumOnCurve(
@@ -1005,7 +1083,17 @@ class Util {
   }
 
   // From https://github.com/adobe-webplatform/Snap.svg/blob/b365287722a72526000ac4bfcf0ce4cac2faa015/src/path.js#L852
-  static bezierBoundingBox(x0, y0, x1, y1, x2, y2, x3, y3, minMax) {
+  static bezierBoundingBox(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    x3: number,
+    y3: number,
+    minMax: number[]
+  ): void {
     minMax[0] = Math.min(minMax[0], x0, x3);
     minMax[1] = Math.min(minMax[1], y0, y3);
     minMax[2] = Math.max(minMax[2], x0, x3);
@@ -1054,12 +1142,12 @@ const PDFStringTranslateTable = [
   0x131, 0x142, 0x153, 0x161, 0x17e, 0, 0x20ac,
 ];
 
-function stringToPDFString(str, keepEscapeSequence = false) {
+function stringToPDFString(str: string, keepEscapeSequence = false): string {
   // See section 7.9.2.2 Text String Type.
   // The string can contain some language codes bracketed with 0x1b,
   // so we must remove them.
   if (str[0] >= "\xEF") {
-    let encoding;
+    let encoding: string | undefined;
     if (str[0] === "\xFE" && str[1] === "\xFF") {
       encoding = "utf-16be";
       if (str.length % 2 === 1) {
@@ -1093,7 +1181,6 @@ function stringToPDFString(str, keepEscapeSequence = false) {
   for (let i = 0, ii = str.length; i < ii; i++) {
     const charCode = str.charCodeAt(i);
     if (!keepEscapeSequence && charCode === 0x1b) {
-      // eslint-disable-next-line no-empty
       while (++i < ii && str.charCodeAt(i) !== 0x1b) {}
       continue;
     }
@@ -1103,15 +1190,15 @@ function stringToPDFString(str, keepEscapeSequence = false) {
   return strBuf.join("");
 }
 
-function stringToUTF8String(str) {
+function stringToUTF8String(str: string): string {
   return decodeURIComponent(escape(str));
 }
 
-function utf8StringToString(str) {
+function utf8StringToString(str: string): string {
   return unescape(encodeURIComponent(str));
 }
 
-function isArrayEqual(arr1, arr2) {
+function isArrayEqual(arr1: unknown[], arr2: unknown[]): boolean {
   if (arr1.length !== arr2.length) {
     return false;
   }
@@ -1123,7 +1210,7 @@ function isArrayEqual(arr1, arr2) {
   return true;
 }
 
-function getModificationDate(date = new Date()) {
+function getModificationDate(date: Date | number = new Date()): string {
   if (!(date instanceof Date)) {
     date = new Date(date);
   }
@@ -1139,9 +1226,9 @@ function getModificationDate(date = new Date()) {
   return buffer.join("");
 }
 
-let NormalizeRegex = null;
-let NormalizationMap = null;
-function normalizeUnicode(str) {
+let NormalizeRegex: RegExp | null = null;
+let NormalizationMap: Map<string, string> | null = null;
+function normalizeUnicode(str: string): string {
   if (!NormalizeRegex) {
     // In order to generate the following regex:
     //  - create a PDF containing all the chars in the range 0000-FFFF with
@@ -1154,13 +1241,13 @@ function normalizeUnicode(str) {
     NormalizationMap = new Map([["ﬅ", "ſt"]]);
   }
   return str.replaceAll(NormalizeRegex, (_, p1, p2) =>
-    p1 ? p1.normalize("NFKC") : NormalizationMap.get(p2)
+    p1 ? p1.normalize("NFKC") : NormalizationMap!.get(p2)!
   );
 }
 
-function getUuid() {
+function getUuid(): string {
   if (
-    (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) ||
+    (typeof PDFJSDev !== "undefined" && PDFJSDev!.test("MOZCENTRAL")) ||
     typeof crypto.randomUUID === "function"
   ) {
     return crypto.randomUUID();
@@ -1172,7 +1259,11 @@ function getUuid() {
 
 const AnnotationPrefix = "pdfjs_internal_id_";
 
-function _isValidExplicitDest(validRef, validName, dest) {
+function _isValidExplicitDest(
+  validRef: (page: unknown) => boolean,
+  validName: (zoom: unknown) => boolean,
+  dest: unknown
+): boolean {
   if (!Array.isArray(dest) || dest.length < 2) {
     return false;
   }
@@ -1222,52 +1313,54 @@ function _isValidExplicitDest(validRef, validName, dest) {
 
 // Helpers for simple `Map.prototype.getOrInsertComputed()` invocations,
 // to avoid duplicate function creation.
-const makeArr = () => [];
-const makeMap = () => new Map();
-const makeObj = () => Object.create(null);
+const makeArr = (): unknown[] => [];
+const makeMap = (): Map<unknown, unknown> => new Map();
+const makeObj = (): Record<string, unknown> => Object.create(null);
 
 // TODO: Remove this once `Math.sumPrecise` is generally available.
 if (
   (typeof PDFJSDev === "undefined" ||
-    PDFJSDev.test("SKIP_BABEL && !MOZCENTRAL")) &&
+    PDFJSDev!.test("SKIP_BABEL && !MOZCENTRAL")) &&
   typeof Math.sumPrecise !== "function"
 ) {
   // Note that this isn't a "proper" polyfill, but since we're only using it to
   // replace `Array.prototype.reduce()` invocations it should be fine.
-  Math.sumPrecise = function (numbers) {
-    return numbers.reduce((a, b) => a + b, 0);
+  Math.sumPrecise = function (numbers: Iterable<number>): number {
+    return [...numbers].reduce((a, b) => a + b, 0);
   };
 }
 
 // See https://developer.mozilla.org/en-US/docs/Web/API/Blob/bytes#browser_compatibility
 if (
   typeof PDFJSDev !== "undefined" &&
-  !PDFJSDev.test("SKIP_BABEL") &&
-  typeof Blob.prototype.bytes !== "function"
+  !PDFJSDev!.test("SKIP_BABEL") &&
+  typeof (Blob.prototype as { bytes?: unknown }).bytes !== "function"
 ) {
-  Blob.prototype.bytes = async function () {
-    return new Uint8Array(await this.arrayBuffer());
-  };
+  (Blob.prototype as { bytes?: () => Promise<Uint8Array> }).bytes =
+    async function (this: Blob): Promise<Uint8Array> {
+      return new Uint8Array(await this.arrayBuffer());
+    };
 }
 
 // See https://developer.mozilla.org/en-US/docs/Web/API/Response/bytes#browser_compatibility
 if (
   typeof PDFJSDev !== "undefined" &&
-  !PDFJSDev.test("SKIP_BABEL") &&
-  typeof Response.prototype.bytes !== "function"
+  !PDFJSDev!.test("SKIP_BABEL") &&
+  typeof (Response.prototype as { bytes?: unknown }).bytes !== "function"
 ) {
-  Response.prototype.bytes = async function () {
-    return new Uint8Array(await this.arrayBuffer());
-  };
+  (Response.prototype as { bytes?: () => Promise<Uint8Array> }).bytes =
+    async function (this: Response): Promise<Uint8Array> {
+      return new Uint8Array(await this.arrayBuffer());
+    };
 }
 
 // TODO: Remove this once Safari 17.4 is the lowest supported version.
 if (
   typeof PDFJSDev !== "undefined" &&
-  !PDFJSDev.test("SKIP_BABEL") &&
+  !PDFJSDev!.test("SKIP_BABEL") &&
   typeof AbortSignal.any !== "function"
 ) {
-  AbortSignal.any = function (iterable) {
+  AbortSignal.any = function (iterable: Iterable<AbortSignal>): AbortSignal {
     const ac = new AbortController();
     const { signal } = ac;
 
@@ -1357,3 +1450,5 @@ export {
   VerbosityLevel,
   warn,
 };
+
+export type { CreateValidAbsoluteUrlOptions };

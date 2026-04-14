@@ -111,7 +111,7 @@ class WebServer {
   }
 
   async #checkRequest(request, response, url) {
-    const localURL = new URL(`.${url.pathname}`, this.rootURL);
+    let localURL = new URL(`.${url.pathname}`, this.rootURL);
 
     // Check if the file/folder exists.
     try {
@@ -126,12 +126,31 @@ class WebServer {
         return;
       }
 
-      response.writeHead(404);
-      response.end();
-      if (this.verbose) {
-        console.error(`${url}: not found`);
+      // If a .js file isn't found, try the .ts equivalent. This supports the
+      // TypeScript migration where source files are renamed from .js to .ts
+      // but import statements still use .js extensions.
+      if (url.pathname.endsWith(".js")) {
+        const tsPathname = url.pathname.slice(0, -3) + ".ts";
+        const tsLocalURL = new URL(`.${tsPathname}`, this.rootURL);
+        try {
+          await fsPromises.realpath(tsLocalURL);
+          localURL = tsLocalURL;
+        } catch {
+          response.writeHead(404);
+          response.end();
+          if (this.verbose) {
+            console.error(`${url}: not found`);
+          }
+          return;
+        }
+      } else {
+        response.writeHead(404);
+        response.end();
+        if (this.verbose) {
+          console.error(`${url}: not found`);
+        }
+        return;
       }
-      return;
     }
 
     // Get the properties of the file/folder.
@@ -290,6 +309,35 @@ class WebServer {
   }
 
   async #serveFile(response, fileURL, fileSize, url) {
+    // TypeScript source files must be transpiled before serving to the browser.
+    // Babel strips the type annotations so native ES module loading works.
+    const isTypeScript = fileURL.pathname.endsWith(".ts");
+    if (isTypeScript) {
+      try {
+        const content = await fsPromises.readFile(fileURL, "utf8");
+        const result = babel.transformSync(content, {
+          filename:
+            process.platform === "win32"
+              ? fileURL.pathname.substring(1)
+              : fileURL.pathname,
+          presets: [["@babel/preset-typescript"]],
+          sourceMaps: false,
+        });
+        const transpiledCode = result.code;
+        const transpiledSize = Buffer.byteLength(transpiledCode, "utf8");
+        response.setHeader("Content-Type", "application/javascript");
+        response.setHeader("Content-Length", transpiledSize);
+        response.writeHead(200);
+        response.end(transpiledCode, "utf8");
+        return;
+      } catch (error) {
+        console.error(`Failed to transpile ${fileURL.pathname}:`, error);
+        response.writeHead(500);
+        response.end();
+        return;
+      }
+    }
+
     // Check if we should instrument this file for coverage
     const shouldInstrument =
       this.coverageEnabled &&

@@ -7,11 +7,18 @@ import noUnsanitized from "eslint-plugin-no-unsanitized";
 import perfectionist from "eslint-plugin-perfectionist";
 import preferMathClamp from "./external/eslint_plugins/prefer-math-clamp.mjs";
 import prettierRecommended from "eslint-plugin-prettier/recommended";
+import tseslint from "@typescript-eslint/eslint-plugin";
+import tsParser from "@typescript-eslint/parser";
 import unicorn from "eslint-plugin-unicorn";
 
 const jsFiles = folder => {
   const prefix = folder === "." ? "" : folder + "/";
   return [prefix + "**/*.js", prefix + "**/*.jsm", prefix + "**/*.mjs"];
+};
+
+const tsFiles = folder => {
+  const prefix = folder === "." ? "" : folder + "/";
+  return [prefix + "**/*.ts", prefix + "**/*.mts"];
 };
 
 // Include all files referenced in extensions/chromium/background.js
@@ -80,7 +87,12 @@ export default [
     },
 
     settings: {
-      "import-x/resolver-next": [import_.createNodeResolver()],
+      "import-x/resolver-next": [
+        import_.createNodeResolver({
+          extensions: [".mjs", ".cjs", ".js", ".ts", ".mts", ".json", ".node"],
+          extensionAlias: { ".js": [".ts", ".js"], ".mjs": [".mts", ".mjs"] },
+        }),
+      ],
     },
 
     languageOptions: {
@@ -98,7 +110,11 @@ export default [
     rules: {
       "import/export": "error",
       "import/exports-last": "error",
-      "import/extensions": ["error", "always", { ignorePackages: true }],
+      "import/extensions": [
+        "error",
+        "always",
+        { pattern: { ts: "never", mts: "never" }, ignorePackages: true },
+      ],
       "import/first": "error",
       "import/named": "error",
       "import/no-cycle": "error",
@@ -381,6 +397,37 @@ export default [
   },
   {
     files: jsFiles("src"),
+    rules: {
+      "no-console": "error",
+    },
+  },
+
+  /* ======================================================================== *\
+                         TypeScript-specific rules
+  \* ======================================================================== */
+
+  {
+    files: tsFiles("."),
+    plugins: {
+      "@typescript-eslint": tseslint,
+    },
+    languageOptions: {
+      parser: tsParser,
+    },
+    rules: {
+      // TypeScript compiler handles these; the JS rules produce false positives
+      "no-undef": "off",
+      "no-unused-vars": "off",
+      "no-use-before-define": "off",
+      "no-redeclare": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { vars: "all", args: "none" },
+      ],
+    },
+  },
+  {
+    files: tsFiles("src"),
     rules: {
       "no-console": "error",
     },

@@ -15,7 +15,19 @@
 
 import { FeatureTest, ImageKind } from "./util.js";
 
-function convertToRGBA(params) {
+type ConvertParams = {
+  kind?: number;
+  src: Uint8Array;
+  srcPos?: number;
+  dest: ArrayBufferView;
+  destPos?: number;
+  width: number;
+  height: number;
+  nonBlackColor?: number;
+  inverseDecode?: boolean;
+};
+
+function convertToRGBA(params: ConvertParams) {
   switch (params.kind) {
     case ImageKind.GRAYSCALE_1BPP:
       return convertBlackAndWhiteToRGBA(params);
@@ -34,7 +46,7 @@ function convertBlackAndWhiteToRGBA({
   height,
   nonBlackColor = 0xffffffff,
   inverseDecode = false,
-}) {
+}: ConvertParams) {
   const black = FeatureTest.isLittleEndian ? 0xff000000 : 0x000000ff;
   const [zeroMapping, oneMapping] = inverseDecode
     ? [nonBlackColor, black]
@@ -43,7 +55,7 @@ function convertBlackAndWhiteToRGBA({
   const widthRemainder = width & 7;
   const xorMask = zeroMapping ^ oneMapping;
   const srcLength = src.length;
-  dest = new Uint32Array(dest.buffer);
+  const destView = new Uint32Array(dest.buffer);
   let destPos = 0;
 
   for (let i = 0; i < height; ++i) {
@@ -53,21 +65,21 @@ function convertBlackAndWhiteToRGBA({
       ++srcPos, destPos += 8
     ) {
       const elem = src[srcPos];
-      dest[destPos] = zeroMapping ^ (-((elem >> 7) & 1) & xorMask);
-      dest[destPos + 1] = zeroMapping ^ (-((elem >> 6) & 1) & xorMask);
-      dest[destPos + 2] = zeroMapping ^ (-((elem >> 5) & 1) & xorMask);
-      dest[destPos + 3] = zeroMapping ^ (-((elem >> 4) & 1) & xorMask);
-      dest[destPos + 4] = zeroMapping ^ (-((elem >> 3) & 1) & xorMask);
-      dest[destPos + 5] = zeroMapping ^ (-((elem >> 2) & 1) & xorMask);
-      dest[destPos + 6] = zeroMapping ^ (-((elem >> 1) & 1) & xorMask);
-      dest[destPos + 7] = zeroMapping ^ (-(elem & 1) & xorMask);
+      destView[destPos] = zeroMapping ^ (-((elem >> 7) & 1) & xorMask);
+      destView[destPos + 1] = zeroMapping ^ (-((elem >> 6) & 1) & xorMask);
+      destView[destPos + 2] = zeroMapping ^ (-((elem >> 5) & 1) & xorMask);
+      destView[destPos + 3] = zeroMapping ^ (-((elem >> 4) & 1) & xorMask);
+      destView[destPos + 4] = zeroMapping ^ (-((elem >> 3) & 1) & xorMask);
+      destView[destPos + 5] = zeroMapping ^ (-((elem >> 2) & 1) & xorMask);
+      destView[destPos + 6] = zeroMapping ^ (-((elem >> 1) & 1) & xorMask);
+      destView[destPos + 7] = zeroMapping ^ (-(elem & 1) & xorMask);
     }
     if (widthRemainder === 0) {
       continue;
     }
     const elem = srcPos < srcLength ? src[srcPos++] : 255;
     for (let j = 0; j < widthRemainder; ++j, ++destPos) {
-      dest[destPos] = zeroMapping ^ (-((elem >> (7 - j)) & 1) & xorMask);
+      destView[destPos] = zeroMapping ^ (-((elem >> (7 - j)) & 1) & xorMask);
     }
   }
 
@@ -81,11 +93,12 @@ function convertRGBToRGBA({
   destPos = 0,
   width,
   height,
-}) {
+}: ConvertParams) {
   let i = 0;
   const len = width * height * 3;
   const len32 = len >> 2;
   const src32 = new Uint32Array(src.buffer, srcPos, len32);
+  const destView = new Uint32Array(dest.buffer);
   const alphaMask = FeatureTest.isLittleEndian ? 0xff000000 : 0xff;
 
   if (FeatureTest.isLittleEndian) {
@@ -96,14 +109,14 @@ function convertRGBToRGBA({
         s2 = src32[i + 1], // G3R3B2G2
         s3 = src32[i + 2]; // B4G4R4B3
 
-      dest[destPos] = s1 | alphaMask;
-      dest[destPos + 1] = (s1 >>> 24) | (s2 << 8) | alphaMask;
-      dest[destPos + 2] = (s2 >>> 16) | (s3 << 16) | alphaMask;
-      dest[destPos + 3] = (s3 >>> 8) | alphaMask;
+      destView[destPos] = s1 | alphaMask;
+      destView[destPos + 1] = (s1 >>> 24) | (s2 << 8) | alphaMask;
+      destView[destPos + 2] = (s2 >>> 16) | (s3 << 16) | alphaMask;
+      destView[destPos + 3] = (s3 >>> 8) | alphaMask;
     }
 
     for (let j = i * 4, jj = srcPos + len; j < jj; j += 3) {
-      dest[destPos++] =
+      destView[destPos++] =
         src[j] | (src[j + 1] << 8) | (src[j + 2] << 16) | alphaMask;
     }
   } else {
@@ -112,14 +125,14 @@ function convertRGBToRGBA({
         s2 = src32[i + 1], // G2B2R3G3
         s3 = src32[i + 2]; // B3R4G4B4
 
-      dest[destPos] = s1 | alphaMask;
-      dest[destPos + 1] = (s1 << 24) | (s2 >>> 8) | alphaMask;
-      dest[destPos + 2] = (s2 << 16) | (s3 >>> 16) | alphaMask;
-      dest[destPos + 3] = (s3 << 8) | alphaMask;
+      destView[destPos] = s1 | alphaMask;
+      destView[destPos + 1] = (s1 << 24) | (s2 >>> 8) | alphaMask;
+      destView[destPos + 2] = (s2 << 16) | (s3 >>> 16) | alphaMask;
+      destView[destPos + 3] = (s3 << 8) | alphaMask;
     }
 
     for (let j = i * 4, jj = srcPos + len; j < jj; j += 3) {
-      dest[destPos++] =
+      destView[destPos++] =
         (src[j] << 24) | (src[j + 1] << 16) | (src[j + 2] << 8) | alphaMask;
     }
   }
@@ -127,7 +140,7 @@ function convertRGBToRGBA({
   return { srcPos: srcPos + len, destPos };
 }
 
-function grayToRGBA(src, dest) {
+function grayToRGBA(src: Uint8Array, dest: Uint32Array) {
   if (FeatureTest.isLittleEndian) {
     for (let i = 0, ii = src.length; i < ii; i++) {
       dest[i] = (src[i] * 0x10101) | 0xff000000;
