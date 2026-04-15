@@ -406,6 +406,9 @@ function createWebpackConfig(
     plugins,
     resolve: {
       alias,
+      // Allow extension-less alias targets (e.g. "web/pdfjs") to resolve
+      // to .ts files now that web/ has been converted.
+      extensions: [".ts", ".mts", ".js", ".mjs"],
       // When a .js import is encountered, also try the .ts equivalent.
       // This mirrors TypeScript's `moduleResolution: "bundler"` behaviour and
       // means we never have to update import statements as files are converted.
@@ -550,7 +553,7 @@ function createWebBundle(defines, options) {
     },
   });
   return gulp
-    .src("./web/viewer.js", { encoding: false })
+    .src("./web/viewer.ts", { encoding: false })
     .pipe(webpack2Stream(viewerFileConfig));
 }
 
@@ -562,7 +565,7 @@ function createGVWebBundle(defines, options) {
     },
   });
   return gulp
-    .src("./web/viewer-geckoview.js", { encoding: false })
+    .src("./web/viewer-geckoview.ts", { encoding: false })
     .pipe(webpack2Stream(viewerFileConfig));
 }
 
@@ -574,7 +577,7 @@ function createComponentsBundle(defines) {
     },
   });
   return gulp
-    .src("./web/pdf_viewer.component.js", { encoding: false })
+    .src("./web/pdf_viewer.component.ts", { encoding: false })
     .pipe(webpack2Stream(componentsFileConfig));
 }
 
@@ -908,7 +911,7 @@ function buildDefaultPreferences(defines, dir) {
     }
   );
   return gulp
-    .src("web/app_options.js", { encoding: false })
+    .src("web/app_options.ts", { encoding: false })
     .pipe(webpack2Stream(defaultPreferencesConfig))
     .pipe(gulp.dest(DEFAULT_PREFERENCES_DIR + dir));
 }
@@ -1634,12 +1637,12 @@ function buildLib(defines, dir) {
   const inputStream = ordered([
     gulp.src(
       [
-        "src/{core,display,shared}/**/*.js",
+        "src/{core,display,shared}/**/*.ts",
         "src/{pdf,pdf.image_decoders,pdf.worker}.ts",
       ],
       { base: "src/", encoding: false, sourcemaps: enableSourceMaps }
     ),
-    gulp.src(["web/*.js", "!web/{pdfjs,viewer}.js"], {
+    gulp.src(["web/*.ts", "!web/{pdfjs,viewer}.ts"], {
       base: ".",
       encoding: false,
       sourcemaps: enableSourceMaps,
@@ -2344,7 +2347,7 @@ function createInternalViewerBundle(defines) {
     },
   });
   return gulp
-    .src("./web/internal/debugger.js", { encoding: false })
+    .src("./web/internal/debugger.ts", { encoding: false })
     .pipe(webpack2Stream(viewerFileConfig));
 }
 
