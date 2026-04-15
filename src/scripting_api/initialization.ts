@@ -46,7 +46,6 @@ function initSandbox(params) {
   const externalCall = globalThis.callExternalFunction;
   delete globalThis.callExternalFunction;
 
-  // eslint-disable-next-line no-eval
   const globalEval = code => globalThis.eval(code);
   const send = data => externalCall("send", [data]);
   const proxyHandler = new ProxyHandler();

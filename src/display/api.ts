@@ -287,11 +287,9 @@ function getDocument(src = {}) {
       ? src.isOffscreenCanvasSupported
       : !isNodeJS;
   const isImageDecoderSupported =
-    // eslint-disable-next-line no-nested-ternary
     typeof src.isImageDecoderSupported === "boolean"
       ? src.isImageDecoderSupported
-      : // eslint-disable-next-line no-nested-ternary
-        typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")
+      : typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")
         ? true
         : typeof PDFJSDev !== "undefined" && PDFJSDev.test("CHROME")
           ? false
@@ -1366,19 +1364,21 @@ class PDFPageProxy {
    * @returns {PageViewport} Contains 'width' and 'height' properties
    *   along with transforms required for rendering.
    */
-  getViewport({
-    scale,
-    rotation = this.rotate,
-    offsetX = 0,
-    offsetY = 0,
-    dontFlip = false,
-  }: {
-    scale: number;
-    rotation?: number;
-    offsetX?: number;
-    offsetY?: number;
-    dontFlip?: boolean;
-  } = {} as any) {
+  getViewport(
+    {
+      scale,
+      rotation = this.rotate,
+      offsetX = 0,
+      offsetY = 0,
+      dontFlip = false,
+    }: {
+      scale: number;
+      rotation?: number;
+      offsetX?: number;
+      offsetY?: number;
+      dontFlip?: boolean;
+    } = {} as any
+  ) {
     return new PageViewport({
       viewBox: this.view,
       userUnit: this.userUnit,

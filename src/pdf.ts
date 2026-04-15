@@ -13,9 +13,10 @@
  * limitations under the License.
  */
 
-// eslint-disable-next-line max-len
+// @ts-nocheck
+
 /** @typedef {import("./display/api").OnProgressParameters} OnProgressParameters */
-// eslint-disable-next-line max-len
+
 /** @typedef {import("./display/api").PDFDocumentLoadingTask} PDFDocumentLoadingTask */
 /** @typedef {import("./display/api").PDFDocumentProxy} PDFDocumentProxy */
 /** @typedef {import("./display/api").PDFPageProxy} PDFPageProxy */

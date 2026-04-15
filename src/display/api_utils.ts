@@ -38,7 +38,7 @@ function getUrlProp(val) {
       if (/^[a-z][a-z0-9\-+.]+:/i.test(val)) {
         return new URL(val);
       }
-      // eslint-disable-next-line no-undef
+
       const url = process.getBuiltinModule("url");
       return new URL(url.pathToFileURL(val));
     }
@@ -61,8 +61,8 @@ function getDataProp(val) {
     typeof PDFJSDev !== "undefined" &&
     PDFJSDev.test("GENERIC") &&
     isNodeJS &&
-    typeof Buffer !== "undefined" && // eslint-disable-line no-undef
-    val instanceof Buffer // eslint-disable-line no-undef
+    typeof Buffer !== "undefined" &&
+    val instanceof Buffer
   ) {
     throw new Error(
       "Please provide binary data as `Uint8Array`, rather than `Buffer`."

@@ -15,10 +15,9 @@
 
 // @ts-nocheck
 
-// eslint-disable-next-line max-len
 /** @typedef {import("./annotation_storage").AnnotationStorage} AnnotationStorage */
 /** @typedef {import("./display_utils").PageViewport} PageViewport */
-// eslint-disable-next-line max-len
+
 /** @typedef {import("../../web/pdf_link_service.js").PDFLinkService} PDFLinkService */
 
 import { XfaText } from "./xfa_text.js";

@@ -15,15 +15,14 @@
 
 // @ts-nocheck
 
-// eslint-disable-next-line max-len
 /** @typedef {import("./tools.js").AnnotationEditorUIManager} AnnotationEditorUIManager */
 /** @typedef {import("../display_utils.js").PageViewport} PageViewport */
-// eslint-disable-next-line max-len
+
 /** @typedef {import("../../../web/text_accessibility.js").TextAccessibilityManager} TextAccessibilityManager */
-// eslint-disable-next-line max-len
+
 /** @typedef {import("../annotation_layer.js").AnnotationLayer} AnnotationLayer */
 /** @typedef {import("../draw_layer.js").DrawLayer} DrawLayer */
-// eslint-disable-next-line max-len
+
 /** @typedef {import("../../../web/struct_tree_layer_builder.js").StructTreeLayerBuilder} StructTreeLayerBuilder */
 /** @typedef {import("../../../web/l10n.js").L10n} L10n */
 

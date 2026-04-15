@@ -342,7 +342,7 @@ class PrintAnnotationStorage extends AnnotationStorage {
   /**
    * @returns {PrintAnnotationStorage}
    */
-  // eslint-disable-next-line getter-return
+
   get print(): PrintAnnotationStorage {
     unreachable("Should not call PrintAnnotationStorage.print");
   }

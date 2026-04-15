@@ -14,7 +14,7 @@
     "paths": {
       "pdfjs-lib": ["./src/pdf"],
       "display-binary_data_factory": ["./src/display/binary_data_factory"],
-      "display-network_stream": ["./src/display/network_stream.js"],
+      "display-network_stream": ["./src/display/network_stream"],
       "display-node_utils": ["./src/display/node_utils"],
       "fluent-bundle": ["./node_modules/@fluent/bundle/esm/index.js"],
       "fluent-dom": ["./node_modules/@fluent/dom/esm/index.js"],
@@ -22,7 +22,7 @@
     }
   },
   "files": [
-    "src/pdf.js",
+    "src/pdf.ts",
     "src/types/globals.d.ts",
     "web/pdf_viewer.component.js"
   ],

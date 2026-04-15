@@ -166,7 +166,7 @@ class DrawingEditor extends AnnotationEditor {
    * @return {Map<AnnotationEditorParamsType, string>} a map between the
    *   parameter types and the name of the options.
    */
-  // eslint-disable-next-line getter-return
+
   static get typesMap() {
     unreachable("Not implemented");
   }

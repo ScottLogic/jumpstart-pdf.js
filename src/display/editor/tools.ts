@@ -16,7 +16,7 @@
 // @ts-nocheck
 
 /** @typedef {import("./editor.js").AnnotationEditor} AnnotationEditor */
-// eslint-disable-next-line max-len
+
 /** @typedef {import("./annotation_editor_layer.js").AnnotationEditorLayer} AnnotationEditorLayer */
 
 import {

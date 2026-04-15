@@ -30,7 +30,7 @@ class Outline {
   /**
    * @type {Object|null} The bounding box of the outline.
    */
-  // eslint-disable-next-line getter-return
+
   get box() {
     unreachable("Abstract getter `box` must be implemented.");
   }

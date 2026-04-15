@@ -22,7 +22,6 @@ import { PDFNetworkStream } from "./network.js";
 import { PDFNodeStream } from "./node_stream.js";
 
 function getNetworkStream(url) {
-  // eslint-disable-next-line no-nested-ternary
   return isValidFetchUrl(url)
     ? PDFFetchStream
     : typeof PDFJSDev !== "undefined" && PDFJSDev.test("GENERIC") && isNodeJS

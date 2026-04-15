@@ -458,7 +458,7 @@ function createMainBundle(defines) {
     },
   });
   return gulp
-    .src("./src/pdf.js", { encoding: false })
+    .src("./src/pdf.ts", { encoding: false })
     .pipe(webpack2Stream(mainFileConfig));
 }
 
@@ -474,7 +474,7 @@ function createScriptingBundle(defines, extraOptions = undefined) {
     extraOptions
   );
   return gulp
-    .src("./src/pdf.scripting.js", { encoding: false })
+    .src("./src/pdf.scripting.ts", { encoding: false })
     .pipe(webpack2Stream(scriptingFileConfig));
 }
 
@@ -485,7 +485,7 @@ function createSandboxExternal(defines) {
     defines,
   };
   return gulp
-    .src("./src/pdf.sandbox.external.js", { encoding: false })
+    .src("./src/pdf.sandbox.external.ts", { encoding: false })
     .pipe(rename("pdf.sandbox.external.sys.mjs"))
     .pipe(
       transform("utf8", content => {
@@ -526,7 +526,7 @@ function createSandboxBundle(defines, extraOptions = undefined) {
   );
 
   return gulp
-    .src("./src/pdf.sandbox.js", { encoding: false })
+    .src("./src/pdf.sandbox.ts", { encoding: false })
     .pipe(webpack2Stream(sandboxFileConfig));
 }
 
@@ -538,7 +538,7 @@ function createWorkerBundle(defines) {
     },
   });
   return gulp
-    .src("./src/pdf.worker.js", { encoding: false })
+    .src("./src/pdf.worker.ts", { encoding: false })
     .pipe(webpack2Stream(workerFileConfig));
 }
 
@@ -588,7 +588,7 @@ function createImageDecodersBundle(defines) {
     },
   });
   return gulp
-    .src("./src/pdf.image_decoders.js", { encoding: false })
+    .src("./src/pdf.image_decoders.ts", { encoding: false })
     .pipe(webpack2Stream(componentsFileConfig));
 }
 
@@ -1635,7 +1635,7 @@ function buildLib(defines, dir) {
     gulp.src(
       [
         "src/{core,display,shared}/**/*.js",
-        "src/{pdf,pdf.image_decoders,pdf.worker}.js",
+        "src/{pdf,pdf.image_decoders,pdf.worker}.ts",
       ],
       { base: "src/", encoding: false, sourcemaps: enableSourceMaps }
     ),

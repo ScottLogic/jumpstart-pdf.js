@@ -115,7 +115,7 @@ function getFilenameFromContentDispositionHeader(contentDisposition) {
     // of at least zero. Any non-zero number must not start with '0'.
     const iter = toParamRegExp("filename\\*((?!0\\d)\\d+)(\\*?)", "ig");
     while ((match = iter.exec(contentDispositionStr)) !== null) {
-      let [, n, quot, part] = match; // eslint-disable-line prefer-const
+      let [, n, quot, part] = match;
       n = parseInt(n, 10);
       if (n in matches) {
         // Ignore anything after the invalid second filename*0.
@@ -132,7 +132,7 @@ function getFilenameFromContentDispositionHeader(contentDisposition) {
         // Numbers must be consecutive. Truncate when there is a hole.
         break;
       }
-      let [quot, part] = matches[n]; // eslint-disable-line prefer-const
+      let [quot, part] = matches[n];
       part = rfc2616unquote(part);
       if (quot) {
         part = unescape(part);
