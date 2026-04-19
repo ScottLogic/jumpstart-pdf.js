@@ -13,10 +13,7 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
-/** @typedef {import("./event_utils").EventBus} EventBus */
-
+import type { EventBus } from "./event_utils.js";
 import { isValidExplicitDest } from "pdfjs-lib";
 import { parseQueryString } from "./ui_utils.js";
 
@@ -28,7 +25,7 @@ const LinkTarget = {
   BLANK: 2,
   PARENT: 3,
   TOP: 4,
-};
+} as const;
 
 /**
  * @typedef {Object} PDFLinkServiceOptions
@@ -50,36 +47,42 @@ const LinkTarget = {
 class PDFLinkService {
   externalLinkEnabled = true;
 
-  /**
-   * @param {PDFLinkServiceOptions} options
-   */
+  eventBus: EventBus;
+  externalLinkTarget: number | null;
+  externalLinkRel: string | null;
+  _ignoreDestinationZoom: boolean;
+  baseUrl: string | null = null;
+  pdfDocument: any = null;
+  pdfViewer: any = null;
+  pdfHistory: any = null;
+
   constructor({
     eventBus,
     externalLinkTarget = null,
     externalLinkRel = null,
     ignoreDestinationZoom = false,
-  }: { eventBus?: any; externalLinkTarget?: null | undefined; externalLinkRel?: null | undefined; ignoreDestinationZoom?: boolean } = {}) {
+  }: {
+    eventBus: EventBus;
+    externalLinkTarget?: number | null;
+    externalLinkRel?: string | null;
+    ignoreDestinationZoom?: boolean;
+  } = {} as any) {
     this.eventBus = eventBus;
     this.externalLinkTarget = externalLinkTarget;
     this.externalLinkRel = externalLinkRel;
     this._ignoreDestinationZoom = ignoreDestinationZoom;
-
-    this.baseUrl = null;
-    this.pdfDocument = null;
-    this.pdfViewer = null;
-    this.pdfHistory = null;
   }
 
-  setDocument(pdfDocument, baseUrl = null) {
+  setDocument(pdfDocument: unknown, baseUrl: string | null = null): void {
     this.baseUrl = baseUrl;
     this.pdfDocument = pdfDocument;
   }
 
-  setViewer(pdfViewer) {
+  setViewer(pdfViewer: unknown): void {
     this.pdfViewer = pdfViewer;
   }
 
-  setHistory(pdfHistory) {
+  setHistory(pdfHistory: unknown): void {
     this.pdfHistory = pdfHistory;
   }
 
@@ -134,7 +137,7 @@ class PDFLinkService {
    *
    * @param {string|Array} dest - The named, or explicit, PDF destination.
    */
-  async goToDestination(dest) {
+  async goToDestination(dest: string | unknown[]): Promise<void> {
     if (!this.pdfDocument) {
       return;
     }
@@ -196,9 +199,10 @@ class PDFLinkService {
     const ac = new AbortController();
     this.eventBus._on(
       "textlayerrendered",
-      evt => {
-        if (evt.pageNumber === pageNumber) {
-          evt.source.textLayer.div.focus();
+      (evt: unknown) => {
+        const e = evt as { pageNumber: number; source: { textLayer: { div: HTMLElement } } };
+        if (e.pageNumber === pageNumber) {
+          e.source.textLayer.div.focus();
           ac.abort();
         }
       },
@@ -211,13 +215,13 @@ class PDFLinkService {
    *
    * @param {number|string} val - The page number, or page label.
    */
-  goToPage(val) {
+  goToPage(val: number | string): void {
     if (!this.pdfDocument) {
       return;
     }
     const pageNumber =
       (typeof val === "string" && this.pdfViewer.pageLabelToPageNumber(val)) ||
-      val | 0;
+      (val as number) | 0;
     if (
       !(
         Number.isInteger(pageNumber) &&
@@ -246,7 +250,7 @@ class PDFLinkService {
    * @param {number} y - The y-coordinate to scroll to in page coordinates.
    * @param {Object} [options]
    */
-  goToXY(pageNumber, x, y, options = {}) {
+  goToXY(pageNumber: number, x: number, y: number, options: Record<string, unknown> = {}): void {
     this.pdfViewer.scrollPageIntoView({
       pageNumber,
       destArray: [null, { name: "XYZ" }, x, y],
@@ -261,7 +265,7 @@ class PDFLinkService {
    * @param {string} url
    * @param {boolean} [newWindow]
    */
-  addLinkAttributes(link, url, newWindow = false) {
+  addLinkAttributes(link: HTMLAnchorElement, url: string, newWindow = false): void {
     if (!url || typeof url !== "string") {
       throw new Error('A valid "url" parameter must provided.');
     }
@@ -302,7 +306,7 @@ class PDFLinkService {
    * @param {string|Array} dest - The PDF destination object.
    * @returns {string} The hyperlink to the PDF object.
    */
-  getDestinationHash(dest) {
+  getDestinationHash(dest: string | unknown[]): string {
     if (typeof dest === "string") {
       if (dest.length > 0) {
         return this.getAnchorUrl("#" + escape(dest));
@@ -322,14 +326,14 @@ class PDFLinkService {
    * @param {string} anchor - The anchor hash, including the #.
    * @returns {string} The hyperlink to the PDF object.
    */
-  getAnchorUrl(anchor) {
+  getAnchorUrl(anchor: string): string {
     return this.baseUrl ? this.baseUrl + anchor : anchor;
   }
 
   /**
    * @param {string} hash
    */
-  setHash(hash) {
+  setHash(hash: string): void {
     if (!this.pdfDocument) {
       return;
     }
@@ -337,7 +341,7 @@ class PDFLinkService {
     if (hash.includes("=")) {
       const params = parseQueryString(hash);
       if (params.has("search")) {
-        const query = params.get("search").replaceAll('"', ""),
+        const query = params.get("search")!.replaceAll('"', ""),
           phrase = params.get("phrase") === "true";
 
         this.eventBus.dispatch("findfromurlhash", {
@@ -347,11 +351,11 @@ class PDFLinkService {
       }
       // borrowing syntax from "Parameters for Opening PDF Files"
       if (params.has("page")) {
-        pageNumber = params.get("page") | 0 || 1;
+        pageNumber = Number(params.get("page")) | 0 || 1;
       }
       if (params.has("zoom")) {
         // Build the destination array.
-        const zoomArgs = params.get("zoom").split(","); // scale,left,top
+        const zoomArgs = params.get("zoom")!.split(","); // scale,left,top
         const zoomArg = zoomArgs[0];
         const zoomArgNumber = parseFloat(zoomArg);
 
@@ -361,8 +365,8 @@ class PDFLinkService {
           dest = [
             null,
             { name: "XYZ" },
-            zoomArgs.length > 1 ? zoomArgs[1] | 0 : null,
-            zoomArgs.length > 2 ? zoomArgs[2] | 0 : null,
+            zoomArgs.length > 1 ? Number(zoomArgs[1]) | 0 : null,
+            zoomArgs.length > 2 ? Number(zoomArgs[2]) | 0 : null,
             zoomArgNumber ? zoomArgNumber / 100 : zoomArg,
           ];
         } else if (zoomArg === "Fit" || zoomArg === "FitB") {
@@ -376,7 +380,7 @@ class PDFLinkService {
           dest = [
             null,
             { name: zoomArg },
-            zoomArgs.length > 1 ? zoomArgs[1] | 0 : null,
+            zoomArgs.length > 1 ? Number(zoomArgs[1]) | 0 : null,
           ];
         } else if (zoomArg === "FitR") {
           if (zoomArgs.length !== 5) {
@@ -387,10 +391,10 @@ class PDFLinkService {
             dest = [
               null,
               { name: zoomArg },
-              zoomArgs[1] | 0,
-              zoomArgs[2] | 0,
-              zoomArgs[3] | 0,
-              zoomArgs[4] | 0,
+              Number(zoomArgs[1]) | 0,
+              Number(zoomArgs[2]) | 0,
+              Number(zoomArgs[3]) | 0,
+              Number(zoomArgs[4]) | 0,
             ];
           }
         } else {
@@ -417,7 +421,7 @@ class PDFLinkService {
       // Ensure that this parameter is *always* handled last, in order to
       // guarantee that it won't be overridden (e.g. by the "page" parameter).
       if (params.has("nameddest")) {
-        this.goToDestination(params.get("nameddest"));
+        this.goToDestination(params.get("nameddest")!);
       }
 
       if (typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")) {
@@ -429,7 +433,7 @@ class PDFLinkService {
       if (!params.has("filename") || !params.has("filedest")) {
         return;
       }
-      hash = params.get("filedest");
+      hash = params.get("filedest")!;
     }
 
     // Named (or explicit) destination.
@@ -456,7 +460,7 @@ class PDFLinkService {
   /**
    * @param {string} action
    */
-  executeNamedAction(action) {
+  executeNamedAction(action: string): void {
     if (!this.pdfDocument) {
       return;
     }
@@ -499,7 +503,7 @@ class PDFLinkService {
   /**
    * @param {Object} action
    */
-  async executeSetOCGState(action) {
+  async executeSetOCGState(action: unknown): Promise<void> {
     if (!this.pdfDocument) {
       return;
     }
@@ -518,7 +522,7 @@ class PDFLinkService {
 }
 
 class SimpleLinkService extends PDFLinkService {
-  setDocument(pdfDocument, baseUrl = null) {}
+  override setDocument(_pdfDocument: unknown, _baseUrl: string | null = null): void {}
 }
 
 export { LinkTarget, PDFLinkService, SimpleLinkService };

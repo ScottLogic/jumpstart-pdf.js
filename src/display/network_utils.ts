@@ -13,13 +13,11 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { assert, ResponseException } from "../shared/util.js";
 import { getFilenameFromContentDispositionHeader } from "./content_disposition.js";
 import { isPdfFile } from "./display_utils.js";
 
-function createHeaders(isHttp, httpHeaders) {
+function createHeaders(isHttp: boolean, httpHeaders: Record<string, string> | null | undefined): Headers {
   const headers = new Headers();
 
   if (!isHttp || !httpHeaders || typeof httpHeaders !== "object") {
@@ -34,7 +32,7 @@ function createHeaders(isHttp, httpHeaders) {
   return headers;
 }
 
-function getResponseOrigin(url) {
+function getResponseOrigin(url: string): string | null {
   // Notably, null is distinct from "null" string (e.g. from file:-URLs).
   return URL.parse(url)?.origin ?? null;
 }
@@ -44,8 +42,13 @@ function validateRangeRequestCapabilities({
   isHttp,
   rangeChunkSize,
   disableRange,
-}) {
-  if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
+}: {
+  responseHeaders: Headers;
+  isHttp: boolean;
+  rangeChunkSize: number;
+  disableRange: boolean;
+}): { contentLength: number; isRangeSupported: boolean } {
+  if (typeof PDFJSDev === "undefined" || PDFJSDev!.test("TESTING")) {
     assert(
       Number.isInteger(rangeChunkSize) && rangeChunkSize > 0,
       "rangeChunkSize must be an integer larger than zero."
@@ -56,7 +59,7 @@ function validateRangeRequestCapabilities({
     isRangeSupported: false,
   };
 
-  const length = parseInt(responseHeaders.get("Content-Length"), 10);
+  const length = parseInt(responseHeaders.get("Content-Length")!, 10);
   if (!Number.isInteger(length)) {
     return rv;
   }
@@ -81,7 +84,7 @@ function validateRangeRequestCapabilities({
   return rv;
 }
 
-function extractFilenameFromHeader(responseHeaders) {
+function extractFilenameFromHeader(responseHeaders: Headers): string | null {
   const contentDisposition = responseHeaders.get("Content-Disposition");
   if (contentDisposition) {
     let filename = getFilenameFromContentDispositionHeader(contentDisposition);
@@ -97,7 +100,7 @@ function extractFilenameFromHeader(responseHeaders) {
   return null;
 }
 
-function createResponseError(status, url) {
+function createResponseError(status: number, url: URL): ResponseException {
   return new ResponseException(
     `Unexpected server response (${status}) while retrieving PDF "${url.href}".`,
     status,
@@ -105,7 +108,7 @@ function createResponseError(status, url) {
   );
 }
 
-function ensureResponseOrigin(rangeOrigin, origin) {
+function ensureResponseOrigin(rangeOrigin: string | null, origin: string | null): void {
   if (rangeOrigin !== origin) {
     throw new Error(
       `Expected range response-origin "${rangeOrigin}" to match "${origin}".`

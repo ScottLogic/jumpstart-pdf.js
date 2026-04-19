@@ -13,20 +13,18 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { docProperties, GenericScripting } from "./generic_scripting.js";
 import { PDFScriptingManager } from "./pdf_scripting_manager.js";
 
 class PDFScriptingManagerComponents extends PDFScriptingManager {
-  constructor(options) {
+  constructor(options: any) {
     // The default viewer already handles adding/removing of DOM events,
     // hence limit this to only the viewer components.
     if (!options.externalServices) {
       window.addEventListener("updatefromsandbox", event => {
         options.eventBus.dispatch("updatefromsandbox", {
           source: window,
-          detail: event.detail,
+          detail: (event as CustomEvent).detail,
         });
       });
     }
@@ -34,7 +32,7 @@ class PDFScriptingManagerComponents extends PDFScriptingManager {
     options.externalServices ||= {
       createScripting: () => new GenericScripting(options.sandboxBundleSrc),
     };
-    options.docProperties ||= pdfDocument => docProperties(pdfDocument);
+    options.docProperties ||= (pdfDocument: any) => docProperties(pdfDocument);
     super(options);
   }
 }

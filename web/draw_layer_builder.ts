@@ -13,30 +13,21 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { DrawLayer } from "pdfjs-lib";
 
-/**
- * @typedef {Object} DrawLayerBuilderRenderOptions
- * @property {string} [intent] - The default value is "display".
- */
-
 class DrawLayerBuilder {
-  #drawLayer = null;
+  #drawLayer: DrawLayer | null = null;
 
-  /**
-   * @param {DrawLayerBuilderRenderOptions} options
-   * @returns {Promise<void>}
-   */
-  async render({ intent = "display" }) {
+  _cancelled = false;
+
+  async render({ intent = "display" }: { intent?: string } = {}): Promise<void> {
     if (intent !== "display" || this.#drawLayer || this._cancelled) {
       return;
     }
     this.#drawLayer = new DrawLayer();
   }
 
-  cancel() {
+  cancel(): void {
     this._cancelled = true;
 
     if (!this.#drawLayer) {
@@ -46,11 +37,11 @@ class DrawLayerBuilder {
     this.#drawLayer = null;
   }
 
-  setParent(parent) {
+  setParent(parent: HTMLElement): void {
     this.#drawLayer?.setParent(parent);
   }
 
-  getDrawLayer() {
+  getDrawLayer(): DrawLayer | null {
     return this.#drawLayer;
   }
 }

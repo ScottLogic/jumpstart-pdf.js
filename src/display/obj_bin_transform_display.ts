@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { assert, FeatureTest, MeshFigureType, Util } from "../shared/util.js";
 import {
   CSS_FONT_INFO,
@@ -30,12 +28,12 @@ class CssFontInfo {
 
   #view;
 
-  constructor(buffer) {
+  constructor(buffer: ArrayBuffer) {
     this.#buffer = buffer;
     this.#view = new DataView(buffer);
   }
 
-  #readString(index) {
+  #readString(index: number): string {
     assert(index < CSS_FONT_INFO.strings.length, "Invalid string index");
     let offset = 0;
     for (let i = 0; i < index; i++) {
@@ -67,7 +65,7 @@ class SystemFontInfo {
 
   #view;
 
-  constructor(buffer) {
+  constructor(buffer: ArrayBuffer) {
     this.#buffer = buffer;
     this.#view = new DataView(buffer);
   }
@@ -76,7 +74,7 @@ class SystemFontInfo {
     return this.#view.getUint8(0) !== 0;
   }
 
-  #readString(index) {
+  #readString(index: number): string {
     assert(index < SYSTEM_FONT_INFO.strings.length, "Invalid string index");
     let offset = 5;
     for (let i = 0; i < index; i++) {
@@ -120,14 +118,16 @@ class SystemFontInfo {
   }
 }
 
+type DataViewNumericGetter = "getInt8" | "getUint8" | "getInt16" | "getUint16" | "getInt32" | "getUint32" | "getFloat32" | "getFloat64";
+
 class FontInfo {
-  #buffer;
+  #buffer: ArrayBuffer;
 
   #decoder = new TextDecoder();
 
-  #view;
+  #view: DataView;
 
-  constructor({ buffer, extra }) {
+  constructor({ buffer, extra }: { buffer: ArrayBuffer; extra?: Record<string, unknown> }) {
     this.#buffer = buffer;
     this.#view = new DataView(buffer);
     if (extra) {
@@ -135,7 +135,7 @@ class FontInfo {
     }
   }
 
-  #readBoolean(index) {
+  #readBoolean(index: number): boolean | undefined {
     assert(index < FONT_INFO.bools.length, "Invalid boolean index");
     const byteOffset = Math.floor(index / 4);
     const bitOffset = (index * 2) % 8;
@@ -183,7 +183,7 @@ class FontInfo {
     return this.#readBoolean(9);
   }
 
-  #readNumber(index) {
+  #readNumber(index: number): number {
     assert(index < FONT_INFO.numbers.length, "Invalid number index");
     return this.#view.getFloat64(FONT_INFO.OFFSET_NUMBERS + index * 8);
   }
@@ -200,14 +200,14 @@ class FontInfo {
     return this.#readNumber(2);
   }
 
-  #readArray(offset, arrLen, lookupName, increment) {
+  #readArray(offset: number, arrLen: number, lookupName: DataViewNumericGetter, increment: number): number[] | undefined {
     const len = this.#view.getUint8(offset);
     if (len === 0) {
       return undefined;
     }
     assert(len === arrLen, "Invalid array length.");
     offset += 1;
-    const arr = new Array(len);
+    const arr: number[] = new Array(len);
     for (let i = 0; i < len; i++) {
       arr[i] = this.#view[lookupName](offset, true);
       offset += increment;
@@ -242,7 +242,7 @@ class FontInfo {
     );
   }
 
-  #readString(index) {
+  #readString(index: number): string {
     assert(index < FONT_INFO.strings.length, "Invalid string index");
     let offset = FONT_INFO.OFFSET_STRINGS + 4;
     for (let i = 0; i < index; i++) {
@@ -335,14 +335,25 @@ class FontInfo {
   }
 }
 
+type MeshFigure = {
+  type: number;
+  coords: Int32Array;
+  colors: Int32Array;
+  verticesPerRow?: number;
+};
+
 class PatternInfo {
-  constructor(buffer) {
+  buffer: ArrayBuffer;
+  view: DataView;
+  data: Uint8Array;
+
+  constructor(buffer: ArrayBuffer) {
     this.buffer = buffer;
     this.view = new DataView(buffer);
     this.data = new Uint8Array(buffer);
   }
 
-  getIR() {
+  getIR(): unknown[] {
     const dataView = this.view;
     const kind = this.data[PATTERN_INFO.KIND];
     const hasBBox = !!this.data[PATTERN_INFO.HAS_BBOX];
@@ -380,7 +391,7 @@ class PatternInfo {
       offset += 3;
     }
 
-    const figures = [];
+    const figures: MeshFigure[] = [];
     for (let i = 0; i < nFigures; ++i) {
       const type = dataView.getUint8(offset);
       offset += 1;
@@ -397,7 +408,7 @@ class PatternInfo {
       const figureColors = new Int32Array(this.buffer, offset, colorsLength);
       offset += colorsLength * 4;
 
-      const figure = {
+      const figure: MeshFigure = {
         type,
         coords: figureCoords,
         colors: figureColors,
@@ -462,9 +473,9 @@ class PatternInfo {
 }
 
 class FontPathInfo {
-  #buffer;
+  #buffer: ArrayBuffer;
 
-  constructor(buffer) {
+  constructor(buffer: ArrayBuffer) {
     this.#buffer = buffer;
   }
 

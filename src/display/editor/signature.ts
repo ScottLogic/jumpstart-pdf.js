@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+
 
 import { AnnotationEditorType, shadow } from "../../shared/util.js";
 import { DrawingEditor, DrawingOptions } from "./draw.js";
@@ -41,7 +41,7 @@ class SignatureOptions extends DrawingOptions {
 }
 
 class DrawnSignatureOptions extends InkDrawingOptions {
-  constructor(viewerParameters) {
+  constructor(viewerParameters: any) {
     super(viewerParameters);
 
     super.updateProperties({
@@ -62,21 +62,45 @@ class DrawnSignatureOptions extends InkDrawingOptions {
  * a signature drawing.
  */
 class SignatureEditor extends DrawingEditor {
+  declare _willKeepAspectRatio: any;
+
+  declare defaultL10nId: any;
+
+  declare _drawingOptions: any;
+
+  declare _uiManager: any;
+
+  declare parent: any;
+
+  declare div: any;
+
+  declare x: any;
+
+  declare y: any;
+
+  declare width: any;
+
+  declare height: any;
+
+  declare pageDimensions: any;
+
   #isExtracted = false;
 
-  #description = null;
+  #description: any = null;
 
-  #signatureData = null;
+  #signatureData: any = null;
 
-  #signatureUUID = null;
+  #signatureUUID: any = null;
 
   static _type = "signature";
 
   static _editorType = AnnotationEditorType.SIGNATURE;
 
-  static _defaultDrawingOptions = null;
+  static _defaultDrawingOptions: any = null;
 
-  constructor(params) {
+  static _defaultDrawnSignatureOptions: any = null;
+
+  constructor(params: any) {
     super({ ...params, mustBeCommitted: true, name: "signatureEditor" });
     this._willKeepAspectRatio = true;
     this.#signatureData = params.signatureData || null;
@@ -85,7 +109,7 @@ class SignatureEditor extends DrawingEditor {
   }
 
   /** @inheritdoc */
-  static initialize(l10n, uiManager) {
+  static initialize(l10n: any, uiManager: any) {
     AnnotationEditor.initialize(l10n, uiManager);
 
     this._defaultDrawingOptions = new SignatureOptions();
@@ -95,7 +119,7 @@ class SignatureEditor extends DrawingEditor {
   }
 
   /** @inheritdoc */
-  static getDefaultDrawingOptions(options) {
+  static getDefaultDrawingOptions(options?: any) {
     const clone = this._defaultDrawingOptions.clone();
     clone.updateProperties(options);
     return clone;
@@ -106,7 +130,7 @@ class SignatureEditor extends DrawingEditor {
     return false;
   }
 
-  static get typesMap() {
+  static get typesMap(): any {
     return shadow(this, "typesMap", new Map());
   }
 
@@ -115,14 +139,14 @@ class SignatureEditor extends DrawingEditor {
   }
 
   /** @inheritdoc */
-  get telemetryFinalData() {
+  get telemetryFinalData(): any {
     return {
       type: "signature",
       hasDescription: !!this.#description,
     };
   }
 
-  static computeTelemetryFinalData(data) {
+  static computeTelemetryFinalData(data: any) {
     const hasDescriptionStats = data.get("hasDescription");
     return {
       hasAltText: hasDescriptionStats.get(true) ?? 0,
@@ -209,7 +233,7 @@ class SignatureEditor extends DrawingEditor {
     return this.div;
   }
 
-  setUuid(uuid) {
+  setUuid(uuid: any) {
     this.#signatureUUID = uuid;
     this.addEditToolbar();
   }
@@ -228,7 +252,7 @@ class SignatureEditor extends DrawingEditor {
       return;
     }
     this.div.setAttribute("data-l10n-args", JSON.stringify({ description }));
-    super.addEditToolbar().then(toolbar => {
+    super.addEditToolbar().then((toolbar: any) => {
       toolbar?.updateEditSignatureButton(description);
     });
   }
@@ -239,7 +263,7 @@ class SignatureEditor extends DrawingEditor {
     const maxDim = Math.max(width, height);
     const outlineData = SignatureExtractor.processDrawnLines({
       lines: {
-        curves: newCurves.map(points => ({ points })),
+        curves: newCurves.map((points: any) => ({ points })),
         thickness,
         width,
         height,
@@ -251,18 +275,18 @@ class SignatureEditor extends DrawingEditor {
       mustSmooth: false,
       areContours,
     });
-    return { areContours, outline: outlineData.outline };
+    return { areContours, outline: outlineData!.outline };
   }
 
   /** @inheritdoc */
-  get toolbarButtons() {
+  get toolbarButtons(): any {
     if (this._uiManager.signatureManager) {
       return [["editSignature", this._uiManager.signatureManager]];
     }
     return super.toolbarButtons;
   }
 
-  addSignature(data, heightInPage, description, uuid) {
+  addSignature(data: any, heightInPage: any, description: any, uuid: any) {
     const { x: savedX, y: savedY } = this;
     const { outline } = (this.#signatureData = data);
     this.#isExtracted = outline instanceof ContourDrawOutline;
@@ -313,7 +337,7 @@ class SignatureEditor extends DrawingEditor {
     this.div.hidden = false;
   }
 
-  getFromImage(bitmap) {
+  getFromImage(bitmap: any) {
     const {
       rawDims: { pageWidth, pageHeight },
       rotation,
@@ -327,7 +351,7 @@ class SignatureEditor extends DrawingEditor {
     );
   }
 
-  getFromText(text, fontInfo) {
+  getFromText(text: any, fontInfo: any) {
     const {
       rawDims: { pageWidth, pageHeight },
       rotation,
@@ -342,7 +366,7 @@ class SignatureEditor extends DrawingEditor {
     );
   }
 
-  getDrawnSignature(curves) {
+  getDrawnSignature(curves: any) {
     const {
       rawDims: { pageWidth, pageHeight },
       rotation,
@@ -359,7 +383,7 @@ class SignatureEditor extends DrawingEditor {
   }
 
   /** @inheritdoc */
-  createDrawingOptions({ areContours, thickness }) {
+  createDrawingOptions({ areContours, thickness }: any) {
     if (areContours) {
       this._drawingOptions = SignatureEditor.getDefaultDrawingOptions();
     } else {
@@ -370,7 +394,7 @@ class SignatureEditor extends DrawingEditor {
   }
 
   /** @inheritdoc */
-  serialize(isForCopying = false) {
+  serialize(isForCopying = false): any {
     if (this.isEmpty()) {
       return null;
     }
@@ -379,7 +403,7 @@ class SignatureEditor extends DrawingEditor {
     const {
       _drawingOptions: { "stroke-width": thickness },
     } = this;
-    const serialized = Object.assign(super.serialize(isForCopying), {
+    const serialized: any = Object.assign(super.serialize(isForCopying), {
       isSignature: true,
       areContours: this.#isExtracted,
       color: [0, 0, 0],
@@ -401,12 +425,12 @@ class SignatureEditor extends DrawingEditor {
 
   /** @inheritdoc */
   static deserializeDraw(
-    pageX,
-    pageY,
-    pageWidth,
-    pageHeight,
-    innerMargin,
-    data
+    pageX: any,
+    pageY: any,
+    pageWidth: any,
+    pageHeight: any,
+    innerMargin: any,
+    data: any
   ) {
     if (data.areContours) {
       return ContourDrawOutline.deserialize(
@@ -430,7 +454,7 @@ class SignatureEditor extends DrawingEditor {
   }
 
   /** @inheritdoc */
-  static async deserialize(data, parent, uiManager) {
+  static async deserialize(data: any, parent: any, uiManager: any) {
     const editor = await super.deserialize(data, parent, uiManager);
     editor.#isExtracted = data.areContours;
     editor.description = data.accessibilityData?.alt || "";

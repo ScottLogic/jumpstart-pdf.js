@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+
 
 import {
   AnnotationEditorParamsType,
@@ -28,7 +28,9 @@ import { BasicColorPicker } from "./color_picker.js";
 import { InkAnnotationElement } from "../annotation_layer.js";
 
 class InkDrawingOptions extends DrawingOptions {
-  constructor(viewerParameters) {
+  _viewParameters: any;
+
+  constructor(viewerParameters: any) {
     super();
     this._viewParameters = viewerParameters;
 
@@ -43,9 +45,9 @@ class InkDrawingOptions extends DrawingOptions {
     });
   }
 
-  updateSVGProperty(name, value) {
+  updateSVGProperty(name: any, value: any) {
     if (name === "stroke-width") {
-      value ??= this["stroke-width"];
+      value ??= (this as any)["stroke-width"];
       value *= this._viewParameters.realScale;
     }
     super.updateSVGProperty(name, value);
@@ -62,20 +64,36 @@ class InkDrawingOptions extends DrawingOptions {
  * Basic draw editor in order to generate an Ink annotation.
  */
 class InkEditor extends DrawingEditor {
+  declare _willKeepAspectRatio: any;
+
+  declare defaultL10nId: any;
+
+  declare _drawingOptions: any;
+
+  declare parent: any;
+
+  declare deleted: any;
+
+  declare annotationElementId: any;
+
+  declare _initialData: any;
+
+  _colorPicker: any = null;
+
   static _type = "ink";
 
   static _editorType = AnnotationEditorType.INK;
 
-  static _defaultDrawingOptions = null;
+  static _defaultDrawingOptions: any = null;
 
-  constructor(params) {
+  constructor(params: any) {
     super({ ...params, name: "inkEditor" });
     this._willKeepAspectRatio = true;
     this.defaultL10nId = "pdfjs-editor-ink-editor";
   }
 
   /** @inheritdoc */
-  static initialize(l10n, uiManager) {
+  static initialize(l10n: any, uiManager: any) {
     AnnotationEditor.initialize(l10n, uiManager);
     this._defaultDrawingOptions = new InkDrawingOptions(
       uiManager.viewParameters
@@ -83,7 +101,7 @@ class InkEditor extends DrawingEditor {
   }
 
   /** @inheritdoc */
-  static getDefaultDrawingOptions(options) {
+  static getDefaultDrawingOptions(options: any) {
     const clone = this._defaultDrawingOptions.clone();
     clone.updateProperties(options);
     return clone;
@@ -95,7 +113,7 @@ class InkEditor extends DrawingEditor {
   }
 
   /** @inheritdoc */
-  static get typesMap() {
+  static get typesMap(): any {
     return shadow(
       this,
       "typesMap",
@@ -108,7 +126,7 @@ class InkEditor extends DrawingEditor {
   }
 
   /** @inheritdoc */
-  static createDrawerInstance(x, y, parentWidth, parentHeight, rotation) {
+  static createDrawerInstance(x: any, y: any, parentWidth: any, parentHeight: any, rotation: any) {
     return new InkDrawOutliner(
       x,
       y,
@@ -121,12 +139,12 @@ class InkEditor extends DrawingEditor {
 
   /** @inheritdoc */
   static deserializeDraw(
-    pageX,
-    pageY,
-    pageWidth,
-    pageHeight,
-    innerMargin,
-    data
+    pageX: any,
+    pageY: any,
+    pageWidth: any,
+    pageHeight: any,
+    innerMargin: any,
+    data: any
   ) {
     return InkDrawOutline.deserialize(
       pageX,
@@ -139,7 +157,7 @@ class InkEditor extends DrawingEditor {
   }
 
   /** @inheritdoc */
-  static async deserialize(data, parent, uiManager) {
+  static async deserialize(data: any, parent: any, uiManager: any) {
     let initialData = null;
     if (data instanceof InkAnnotationElement) {
       const {
@@ -192,7 +210,7 @@ class InkEditor extends DrawingEditor {
   }
 
   /** @inheritdoc */
-  get toolbarButtons() {
+  get toolbarButtons(): any {
     this._colorPicker ||= new BasicColorPicker(this);
     return [["colorPicker", this._colorPicker]];
   }
@@ -224,7 +242,7 @@ class InkEditor extends DrawingEditor {
   }
 
   static onScaleChangingWhenDrawing() {
-    const parent = this._currentParent;
+    const parent: any = this._currentParent;
     if (!parent) {
       return;
     }
@@ -237,16 +255,16 @@ class InkEditor extends DrawingEditor {
   }
 
   /** @inheritdoc */
-  createDrawingOptions({ color, thickness, opacity }) {
+  createDrawingOptions({ color, thickness, opacity }: any) {
     this._drawingOptions = InkEditor.getDefaultDrawingOptions({
-      stroke: Util.makeHexColor(...color),
+      stroke: Util.makeHexColor(...(color as [number, number, number])),
       "stroke-width": thickness,
       "stroke-opacity": opacity,
     });
   }
 
   /** @inheritdoc */
-  serialize(isForCopying = false) {
+  serialize(isForCopying = false): any {
     if (this.isEmpty()) {
       return null;
     }
@@ -263,7 +281,7 @@ class InkEditor extends DrawingEditor {
         "stroke-width": thickness,
       },
     } = this;
-    const serialized = Object.assign(super.serialize(isForCopying), {
+    const serialized: any = Object.assign(super.serialize(isForCopying), {
       color: AnnotationEditor._colorManager.convert(stroke),
       opacity,
       thickness,
@@ -287,13 +305,13 @@ class InkEditor extends DrawingEditor {
     return serialized;
   }
 
-  #hasElementChanged(serialized) {
+  #hasElementChanged(serialized: any) {
     const { color, thickness, opacity, pageIndex } = this._initialData;
     return (
       this.hasEditedComment ||
       this._hasBeenMoved ||
       this._hasBeenResized ||
-      serialized.color.some((c, i) => c !== color[i]) ||
+      serialized.color.some((c: any, i: any) => c !== color[i]) ||
       serialized.thickness !== thickness ||
       serialized.opacity !== opacity ||
       serialized.pageIndex !== pageIndex
@@ -301,7 +319,7 @@ class InkEditor extends DrawingEditor {
   }
 
   /** @inheritdoc */
-  renderAnnotationElement(annotation) {
+  renderAnnotationElement(annotation: any) {
     if (this.deleted) {
       annotation.hide();
       return null;

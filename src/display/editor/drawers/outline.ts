@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+
 
 import { unreachable } from "../../../shared/util.js";
 
@@ -31,15 +31,16 @@ class Outline {
    * @type {Object|null} The bounding box of the outline.
    */
 
-  get box() {
+  get box(): any {
     unreachable("Abstract getter `box` must be implemented.");
+    return null;
   }
 
-  serialize(_bbox, _rotation) {
+  serialize(_bbox: any, _rotation: any) {
     unreachable("Abstract method `serialize` must be implemented.");
   }
 
-  static _rescale(src, tx, ty, sx, sy, dest) {
+  static _rescale(src: any, tx: any, ty: any, sx: any, sy: any, dest: any) {
     dest ||= new Float32Array(src.length);
     for (let i = 0, ii = src.length; i < ii; i += 2) {
       dest[i] = tx + src[i] * sx;
@@ -48,7 +49,7 @@ class Outline {
     return dest;
   }
 
-  static _rescaleAndSwap(src, tx, ty, sx, sy, dest) {
+  static _rescaleAndSwap(src: any, tx: any, ty: any, sx: any, sy: any, dest: any) {
     dest ||= new Float32Array(src.length);
     for (let i = 0, ii = src.length; i < ii; i += 2) {
       dest[i] = tx + src[i + 1] * sx;
@@ -57,7 +58,7 @@ class Outline {
     return dest;
   }
 
-  static _translate(src, tx, ty, dest) {
+  static _translate(src: any, tx: any, ty: any, dest: any) {
     dest ||= new Float32Array(src.length);
     for (let i = 0, ii = src.length; i < ii; i += 2) {
       dest[i] = tx + src[i];
@@ -66,7 +67,7 @@ class Outline {
     return dest;
   }
 
-  static svgRound(x) {
+  static svgRound(x: any) {
     // 0.1234 will be 1234 and this way we economize 2 bytes per number.
     // Of course, it makes sense only when the viewBox is [0 0 10000 10000].
     // And it helps to avoid bugs like:
@@ -74,7 +75,7 @@ class Outline {
     return Math.round(x * 10000);
   }
 
-  static _normalizePoint(x, y, parentWidth, parentHeight, rotation) {
+  static _normalizePoint(x: any, y: any, parentWidth: any, parentHeight: any, rotation: any) {
     switch (rotation) {
       case 90:
         return [1 - y / parentWidth, x / parentHeight];
@@ -87,7 +88,7 @@ class Outline {
     }
   }
 
-  static _normalizePagePoint(x, y, rotation) {
+  static _normalizePagePoint(x: any, y: any, rotation: any) {
     switch (rotation) {
       case 90:
         return [1 - y, x];
@@ -100,7 +101,7 @@ class Outline {
     }
   }
 
-  static createBezierPoints(x1, y1, x2, y2, x3, y3) {
+  static createBezierPoints(x1: any, y1: any, x2: any, y2: any, x3: any, y3: any) {
     return [
       (x1 + 5 * x2) / 6,
       (y1 + 5 * y2) / 6,

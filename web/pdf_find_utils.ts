@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { FeatureTest } from "pdfjs-lib";
 
 const CharacterType = {
@@ -26,28 +24,28 @@ const CharacterType = {
   HIRAGANA_LETTER: 5,
   HALFWIDTH_KATAKANA_LETTER: 6,
   THAI_LETTER: 7,
-};
+} as const;
 
-function isAlphabeticalScript(charCode) {
+function isAlphabeticalScript(charCode: number): boolean {
   return charCode < 0x2e80;
 }
 
-function isAscii(charCode) {
+function isAscii(charCode: number): boolean {
   return (charCode & 0xff80) === 0;
 }
 
-function isAsciiAlpha(charCode) {
+function isAsciiAlpha(charCode: number): boolean {
   return (
     (charCode >= /* a = */ 0x61 && charCode <= /* z = */ 0x7a) ||
     (charCode >= /* A = */ 0x41 && charCode <= /* Z = */ 0x5a)
   );
 }
 
-function isAsciiDigit(charCode) {
+function isAsciiDigit(charCode: number): boolean {
   return charCode >= /* 0 = */ 0x30 && charCode <= /* 9 = */ 0x39;
 }
 
-function isAsciiSpace(charCode) {
+function isAsciiSpace(charCode: number): boolean {
   return (
     charCode === /* SPACE = */ 0x20 ||
     charCode === /* TAB = */ 0x09 ||
@@ -56,26 +54,26 @@ function isAsciiSpace(charCode) {
   );
 }
 
-function isHan(charCode) {
+function isHan(charCode: number): boolean {
   return (
     (charCode >= 0x3400 && charCode <= 0x9fff) ||
     (charCode >= 0xf900 && charCode <= 0xfaff)
   );
 }
 
-function isKatakana(charCode) {
+function isKatakana(charCode: number): boolean {
   return charCode >= 0x30a0 && charCode <= 0x30ff;
 }
 
-function isHiragana(charCode) {
+function isHiragana(charCode: number): boolean {
   return charCode >= 0x3040 && charCode <= 0x309f;
 }
 
-function isHalfwidthKatakana(charCode) {
+function isHalfwidthKatakana(charCode: number): boolean {
   return charCode >= 0xff60 && charCode <= 0xff9f;
 }
 
-function isThai(charCode) {
+function isThai(charCode: number): boolean {
   return (charCode & 0xff80) === 0x0e00;
 }
 
@@ -83,7 +81,7 @@ function isThai(charCode) {
  * This function is based on the word-break detection implemented in:
  * https://hg.mozilla.org/mozilla-central/file/tip/intl/lwbrk/WordBreaker.cpp
  */
-function getCharacterType(charCode) {
+function getCharacterType(charCode: number): number {
   if (isAlphabeticalScript(charCode)) {
     if (isAscii(charCode)) {
       if (isAsciiSpace(charCode)) {
@@ -116,8 +114,8 @@ function getCharacterType(charCode) {
   return CharacterType.ALPHA_LETTER;
 }
 
-let NormalizeWithNFKC;
-function getNormalizeWithNFKC() {
+let NormalizeWithNFKC: string | undefined;
+function getNormalizeWithNFKC(): string {
   if (
     (typeof PDFJSDev === "undefined" && FeatureTest.platform.isFirefox) ||
     (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL"))
@@ -137,8 +135,8 @@ function getNormalizeWithNFKC() {
     PDFJSDev.test("TESTING") ||
     (!PDFJSDev.test("MOZCENTRAL") && !NormalizeWithNFKC)
   ) {
-    const ranges = [];
-    const range = [];
+    const ranges: string[] = [];
+    const range: number[] = [];
     const diacriticsRegex = /^\p{M}$/u;
     // Some chars must be replaced by their NFKC counterpart during a search.
     for (let i = 0; i < 65536; i++) {
@@ -190,7 +188,7 @@ function getNormalizeWithNFKC() {
       );
     }
   }
-  return NormalizeWithNFKC;
+  return NormalizeWithNFKC!;
 }
 
 export { CharacterType, getCharacterType, getNormalizeWithNFKC };

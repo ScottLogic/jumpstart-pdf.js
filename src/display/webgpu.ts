@@ -13,9 +13,9 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { MeshFigureType } from "../shared/util.js";
+
+declare const GPUBufferUsage: { VERTEX: number; COPY_DST: number; UNIFORM: number };
 
 // WGSL shader for Gouraud-shaded triangle mesh rasterization.
 // Vertices arrive in PDF content-space coordinates; the vertex shader
@@ -68,25 +68,25 @@ fn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {
 `;
 
 class WebGPU {
-  #initPromise = null;
+  #initPromise: Promise<boolean> | null = null;
 
-  #device = null;
+  #device: any = null;
 
-  #meshPipeline = null;
+  #meshPipeline: any = null;
 
   // Format chosen to match the OffscreenCanvas swapchain on this device.
-  #preferredFormat = null;
+  #preferredFormat: any = null;
 
-  async #initGPU() {
-    if (!globalThis.navigator?.gpu) {
+  async #initGPU(): Promise<boolean> {
+    if (!(globalThis.navigator as any)?.gpu) {
       return false;
     }
     try {
-      const adapter = await navigator.gpu.requestAdapter();
+      const adapter = await (navigator as any).gpu.requestAdapter();
       if (!adapter) {
         return false;
       }
-      this.#preferredFormat = navigator.gpu.getPreferredCanvasFormat();
+      this.#preferredFormat = (navigator as any).gpu.getPreferredCanvasFormat();
       this.#device = await adapter.requestDevice();
       return true;
     } catch {
@@ -98,7 +98,7 @@ class WebGPU {
    * Start GPU initialization.
    * @returns {Promise<boolean>}  true when a GPU device is available.
    */
-  init() {
+  init(): Promise<boolean> {
     return (this.#initPromise ||= this.#initGPU());
   }
 
@@ -159,7 +159,7 @@ class WebGPU {
    * @returns {{ posData: Float32Array, colData: Uint8Array,
    *   vertexCount: number }}
    */
-  #buildVertexStreams(figures, context) {
+  #buildVertexStreams(figures: any[], context: any) {
     const { coords, colors } = context;
 
     // Count vertices first so we can allocate the typed arrays exactly once.
@@ -183,7 +183,7 @@ class WebGPU {
       cOff = 0;
 
     // pi and ci are raw vertex indices; coords is stride-2, colors stride-4.
-    const addVertex = (pi, ci) => {
+    const addVertex = (pi: number, ci: number) => {
       posData[pOff++] = coords[pi * 2];
       posData[pOff++] = coords[pi * 2 + 1];
       colData[cOff++] = colors[ci * 4];
@@ -248,13 +248,13 @@ class WebGPU {
    * @returns {ImageBitmap}
    */
   draw(
-    figures,
-    context,
-    backgroundColor,
-    paddedWidth,
-    paddedHeight,
-    borderSize
-  ) {
+    figures: any[],
+    context: any,
+    backgroundColor: Uint8Array | null,
+    paddedWidth: number,
+    paddedHeight: number,
+    borderSize: number
+  ): ImageBitmap {
     // Lazily compile the mesh pipeline the first time we need to draw.
     this.loadMeshShader();
 
@@ -310,7 +310,7 @@ class WebGPU {
 
     // The canvas covers the full padded area so the border is naturally clear.
     const offscreen = new OffscreenCanvas(paddedWidth, paddedHeight);
-    const gpuCtx = offscreen.getContext("webgpu");
+    const gpuCtx: any = offscreen.getContext("webgpu" as any);
     gpuCtx.configure({
       device,
       format: this.#preferredFormat,
@@ -383,13 +383,13 @@ function loadMeshShader() {
 }
 
 function drawMeshWithGPU(
-  figures,
-  context,
-  backgroundColor,
-  paddedWidth,
-  paddedHeight,
-  borderSize
-) {
+  figures: any[],
+  context: any,
+  backgroundColor: Uint8Array | null,
+  paddedWidth: number,
+  paddedHeight: number,
+  borderSize: number
+): ImageBitmap {
   return _webGPU.draw(
     figures,
     context,

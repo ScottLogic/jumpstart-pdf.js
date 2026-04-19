@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { stringToBytes } from "../shared/util.js";
 
 // This getFilenameFromContentDispositionHeader function is adapted from
@@ -30,13 +28,13 @@ import { stringToBytes } from "../shared/util.js";
  * @param {string} contentDisposition
  * @returns {string} Filename, if found in the Content-Disposition header.
  */
-function getFilenameFromContentDispositionHeader(contentDisposition) {
+function getFilenameFromContentDispositionHeader(contentDisposition: string): string {
   let needsEncodingFixup = true;
 
   // filename*=ext-value ("ext-value" from RFC 5987, referenced by RFC 6266).
-  let tmp = toParamRegExp("filename\\*", "i").exec(contentDisposition);
-  if (tmp) {
-    tmp = tmp[1];
+  let tmpMatch = toParamRegExp("filename\\*", "i").exec(contentDisposition);
+  if (tmpMatch) {
+    const tmp = tmpMatch[1]!;
     let filename = rfc2616unquote(tmp);
     filename = unescape(filename);
     filename = rfc5987decode(filename);
@@ -47,17 +45,17 @@ function getFilenameFromContentDispositionHeader(contentDisposition) {
   // Continuations (RFC 2231 section 3, referenced by RFC 5987 section 3.1).
   // filename*n*=part
   // filename*n=part
-  tmp = rfc2231getparam(contentDisposition);
-  if (tmp) {
+  const tmpParam = rfc2231getparam(contentDisposition);
+  if (tmpParam) {
     // RFC 2047, section
-    const filename = rfc2047decode(tmp);
+    const filename = rfc2047decode(tmpParam);
     return fixupEncoding(filename);
   }
 
   // filename=value (RFC 5987, section 4.1).
-  tmp = toParamRegExp("filename", "i").exec(contentDisposition);
-  if (tmp) {
-    tmp = tmp[1];
+  tmpMatch = toParamRegExp("filename", "i").exec(contentDisposition);
+  if (tmpMatch) {
+    const tmp = tmpMatch[1]!;
     let filename = rfc2616unquote(tmp);
     filename = rfc2047decode(filename);
     return fixupEncoding(filename);
@@ -66,7 +64,7 @@ function getFilenameFromContentDispositionHeader(contentDisposition) {
   // After this line there are only function declarations. We cannot put
   // "return" here for readability because babel would then drop the function
   // declarations...
-  function toParamRegExp(attributePattern, flags) {
+  function toParamRegExp(attributePattern: string, flags: string): RegExp {
     return new RegExp(
       "(?:^|;)\\s*" +
         attributePattern +
@@ -81,7 +79,7 @@ function getFilenameFromContentDispositionHeader(contentDisposition) {
       flags
     );
   }
-  function textdecode(encoding, value) {
+  function textdecode(encoding: string, value: string): string {
     if (encoding) {
       if (!/^[\x00-\xFF]+$/.test(value)) {
         return value;
@@ -97,7 +95,7 @@ function getFilenameFromContentDispositionHeader(contentDisposition) {
     }
     return value;
   }
-  function fixupEncoding(value) {
+  function fixupEncoding(value: string): string {
     if (needsEncodingFixup && /[\x80-\xff]/.test(value)) {
       // Maybe multi-byte UTF-8.
       value = textdecode("utf-8", value);
@@ -108,15 +106,15 @@ function getFilenameFromContentDispositionHeader(contentDisposition) {
     }
     return value;
   }
-  function rfc2231getparam(contentDispositionStr) {
-    const matches = [];
-    let match;
+  function rfc2231getparam(contentDispositionStr: string): string {
+    const matches: [string, string][] = [];
+    let match: RegExpExecArray | null;
     // Iterate over all filename*n= and filename*n*= with n being an integer
     // of at least zero. Any non-zero number must not start with '0'.
     const iter = toParamRegExp("filename\\*((?!0\\d)\\d+)(\\*?)", "ig");
     while ((match = iter.exec(contentDispositionStr)) !== null) {
-      let [, n, quot, part] = match;
-      n = parseInt(n, 10);
+      const [, nStr, quot, part] = match as unknown as [string, string, string, string];
+      const n = parseInt(nStr, 10);
       if (n in matches) {
         // Ignore anything after the invalid second filename*0.
         if (n === 0) {
@@ -126,13 +124,13 @@ function getFilenameFromContentDispositionHeader(contentDisposition) {
       }
       matches[n] = [quot, part];
     }
-    const parts = [];
+    const parts: string[] = [];
     for (let n = 0; n < matches.length; ++n) {
       if (!(n in matches)) {
         // Numbers must be consecutive. Truncate when there is a hole.
         break;
       }
-      let [quot, part] = matches[n];
+      let [quot, part] = matches[n]!;
       part = rfc2616unquote(part);
       if (quot) {
         part = unescape(part);
@@ -144,7 +142,7 @@ function getFilenameFromContentDispositionHeader(contentDisposition) {
     }
     return parts.join("");
   }
-  function rfc2616unquote(value) {
+  function rfc2616unquote(value: string): string {
     if (value.startsWith('"')) {
       const parts = value.slice(1).split('\\"');
       // Find the first unescaped " and terminate there.
@@ -160,7 +158,7 @@ function getFilenameFromContentDispositionHeader(contentDisposition) {
     }
     return value;
   }
-  function rfc5987decode(extvalue) {
+  function rfc5987decode(extvalue: string): string {
     // Decodes "ext-value" from RFC 5987.
     const encodingend = extvalue.indexOf("'");
     if (encodingend === -1) {
@@ -175,7 +173,7 @@ function getFilenameFromContentDispositionHeader(contentDisposition) {
     const value = langvalue.replace(/^[^']*'/, "");
     return textdecode(encoding, value);
   }
-  function rfc2047decode(value) {
+  function rfc2047decode(value: string): string {
     // RFC 2047-decode the result. Firefox tried to drop support for it, but
     // backed out because some servers use it - https://bugzil.la/875615
     // Firefox's condition for decoding is here: https://searchfox.org/mozilla-central/rev/4a590a5a15e35d88a3b23dd6ac3c471cf85b04a8/netwerk/mime/nsMIMEHeaderParamImpl.cpp#742-748
@@ -198,7 +196,7 @@ function getFilenameFromContentDispositionHeader(contentDisposition) {
     //        ... but Firefox permits ? and space.
     return value.replaceAll(
       /=\?([\w-]*)\?([QqBb])\?((?:[^?]|\?(?!=))*)\?=/g,
-      function (matches, charset, encoding, text) {
+      function (_match: string, charset: string, encoding: string, text: string) {
         if (encoding === "q" || encoding === "Q") {
           // RFC 2047 section 4.2.
           text = text.replaceAll("_", " ");

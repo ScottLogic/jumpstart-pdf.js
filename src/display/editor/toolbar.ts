@@ -13,30 +13,30 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+
 
 import { noContextMenu, stopEvent } from "../display_utils.js";
 
 class EditorToolbar {
-  #toolbar = null;
+  #toolbar: any = null;
 
-  #colorPicker = null;
+  #colorPicker: any = null;
 
-  #editor;
+  #editor: any;
 
-  #buttons = null;
+  #buttons: any = null;
 
-  #altText = null;
+  #altText: any = null;
 
-  #comment = null;
+  #comment: any = null;
 
-  #commentButtonDivider = null;
+  #commentButtonDivider: any = null;
 
-  #signatureDescriptionButton = null;
+  #signatureDescriptionButton: any = null;
 
-  static #l10nRemove = null;
+  static #l10nRemove: any = null;
 
-  constructor(editor) {
+  constructor(editor: any) {
     this.#editor = editor;
 
     EditorToolbar.#l10nRemove ||= Object.freeze({
@@ -85,21 +85,21 @@ class EditorToolbar {
     return this.#toolbar;
   }
 
-  static #pointerDown(e) {
+  static #pointerDown(e: any) {
     e.stopPropagation();
   }
 
-  #focusIn(e) {
+  #focusIn(e: any) {
     this.#editor._focusEventsAllowed = false;
     stopEvent(e);
   }
 
-  #focusOut(e) {
+  #focusOut(e: any) {
     this.#editor._focusEventsAllowed = true;
     stopEvent(e);
   }
 
-  #addListenersToElement(element) {
+  #addListenersToElement(element: any) {
     // If we're clicking on a button with the keyboard or with
     // the mouse, we don't want to trigger any focus events on
     // the editor.
@@ -155,14 +155,14 @@ class EditorToolbar {
     return divider;
   }
 
-  async addAltText(altText) {
+  async addAltText(altText: any) {
     const button = await altText.render();
     this.#addListenersToElement(button);
     this.#buttons.append(button, this.#divider);
     this.#altText = altText;
   }
 
-  addComment(comment, beforeElement = null) {
+  addComment(comment: any, beforeElement: any = null) {
     if (this.#comment) {
       return;
     }
@@ -182,7 +182,7 @@ class EditorToolbar {
     comment.toolbar = this;
   }
 
-  addColorPicker(colorPicker) {
+  addColorPicker(colorPicker: any) {
     if (this.#colorPicker) {
       return;
     }
@@ -192,14 +192,14 @@ class EditorToolbar {
     this.#buttons.append(button, this.#divider);
   }
 
-  async addEditSignatureButton(signatureManager) {
+  async addEditSignatureButton(signatureManager: any) {
     const button = (this.#signatureDescriptionButton =
       await signatureManager.renderEditButton(this.#editor));
     this.#addListenersToElement(button);
     this.#buttons.append(button, this.#divider);
   }
 
-  removeButton(name) {
+  removeButton(name: any) {
     switch (name) {
       case "comment":
         this.#comment?.removeToolbarCommentButton();
@@ -210,7 +210,7 @@ class EditorToolbar {
     }
   }
 
-  async addButton(name, tool) {
+  async addButton(name: any, tool: any) {
     switch (name) {
       case "colorPicker":
         if (tool) {
@@ -238,7 +238,7 @@ class EditorToolbar {
     }
   }
 
-  async addButtonBefore(name, tool, beforeSelector) {
+  async addButtonBefore(name: any, tool: any, beforeSelector: any) {
     if (!tool && name === "comment") {
       return;
     }
@@ -251,7 +251,7 @@ class EditorToolbar {
     }
   }
 
-  updateEditSignatureButton(description) {
+  updateEditSignatureButton(description: any) {
     if (this.#signatureDescriptionButton) {
       this.#signatureDescriptionButton.title = description;
     }
@@ -265,13 +265,13 @@ class EditorToolbar {
 }
 
 class FloatingToolbar {
-  #buttons = null;
+  #buttons: any = null;
 
-  #toolbar = null;
+  #toolbar: any = null;
 
-  #uiManager;
+  #uiManager: any;
 
-  constructor(uiManager) {
+  constructor(uiManager: any) {
     this.#uiManager = uiManager;
   }
 
@@ -314,7 +314,7 @@ class FloatingToolbar {
     return editToolbar;
   }
 
-  #getLastPoint(boxes, isLTR) {
+  #getLastPoint(boxes: any, isLTR: any) {
     let lastY = 0;
     let lastX = 0;
     for (const box of boxes) {
@@ -339,7 +339,7 @@ class FloatingToolbar {
     return [isLTR ? 1 - lastX : lastX, lastY];
   }
 
-  show(parent, boxes, isLTR) {
+  show(parent: any, boxes: any, isLTR: any) {
     const [x, y] = this.#getLastPoint(boxes, isLTR);
     const { style } = (this.#toolbar ||= this.#render());
     parent.append(this.#toolbar);
@@ -351,7 +351,7 @@ class FloatingToolbar {
     this.#toolbar.remove();
   }
 
-  #makeButton(buttonClass, l10nId, labelL10nId, clickHandler) {
+  #makeButton(buttonClass: any, l10nId: any, labelL10nId: any, clickHandler: any) {
     const button = document.createElement("button");
     button.classList.add("basic", buttonClass);
     button.tabIndex = 0;

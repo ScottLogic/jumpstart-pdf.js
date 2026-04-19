@@ -13,9 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-/* globals process */
-
 import { isNodeJS, warn } from "../shared/util.js";
 import { BaseBinaryDataFactory } from "./binary_data_factory.js";
 import { BaseCanvasFactory } from "./canvas_factory.js";
@@ -33,7 +30,7 @@ if (isNodeJS) {
   } else {
     let canvas;
     try {
-      const require = process
+      const require = (process as any)
         .getBuiltinModule("module")
         .createRequire(import.meta.url);
 
@@ -68,7 +65,7 @@ if (isNodeJS) {
       }
     }
     if (!globalThis.navigator?.language) {
-      globalThis.navigator = {
+      (globalThis as any).navigator = {
         language: "en-US",
         platform: "",
         userAgent: "",
@@ -77,8 +74,8 @@ if (isNodeJS) {
   }
 }
 
-async function fetchData(url) {
-  const fs = process.getBuiltinModule("fs/promises");
+async function fetchData(url: string | URL): Promise<Uint8Array> {
+  const fs = (process as any).getBuiltinModule("fs/promises");
   const data = await fs.readFile(url);
   return new Uint8Array(data);
 }
@@ -89,8 +86,8 @@ class NodeCanvasFactory extends BaseCanvasFactory {
   /**
    * @ignore
    */
-  _createCanvas(width, height) {
-    const require = process
+  override _createCanvas(width: number, height: number): HTMLCanvasElement {
+    const require = (process as any)
       .getBuiltinModule("module")
       .createRequire(import.meta.url);
     const canvas = require("@napi-rs/canvas");
@@ -102,7 +99,7 @@ class NodeBinaryDataFactory extends BaseBinaryDataFactory {
   /**
    * @ignore
    */
-  async _fetch(url, kind) {
+  override async _fetch(url: string, _kind: string): Promise<Uint8Array> {
     return fetchData(url);
   }
 }

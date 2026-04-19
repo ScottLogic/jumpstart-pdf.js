@@ -13,31 +13,47 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+type EventBusListener = (data: unknown) => void;
+
+type EventBusOnOptions = {
+  once?: boolean;
+  signal?: AbortSignal;
+} | null;
+
+type EventBusInternalOptions = {
+  external?: boolean;
+  once?: boolean;
+  signal?: AbortSignal;
+} | null;
+
+type ListenerEntry = {
+  listener: EventBusListener;
+  external: boolean;
+  once: boolean;
+  rmAbort: (() => void) | null;
+};
 
 const WaitOnType = {
   EVENT: "event",
   TIMEOUT: "timeout",
-};
+} as const;
 
-/**
- * @typedef {Object} WaitOnEventOrTimeoutParameters
- * @property {Object} target - The event target, can for example be:
- *   `window`, `document`, a DOM element, or an {EventBus} instance.
- * @property {string} name - The name of the event.
- * @property {number} delay - The delay, in milliseconds, after which the
- *   timeout occurs (if the event wasn't already dispatched).
- */
+type WaitOnTypeValue = (typeof WaitOnType)[keyof typeof WaitOnType];
 
 /**
  * Allows waiting for an event or a timeout, whichever occurs first.
  * Can be used to ensure that an action always occurs, even when an event
  * arrives late or not at all.
- *
- * @param {WaitOnEventOrTimeoutParameters}
- * @returns {Promise} A promise that is resolved with a {WaitOnType} value.
  */
-async function waitOnEventOrTimeout({ target, name, delay = 0 }) {
+async function waitOnEventOrTimeout({
+  target,
+  name,
+  delay = 0,
+}: {
+  target: EventTarget | EventBus;
+  name: string;
+  delay?: number;
+}): Promise<WaitOnTypeValue> {
   if (
     typeof target !== "object" ||
     !(name && typeof name === "string") ||
@@ -45,20 +61,26 @@ async function waitOnEventOrTimeout({ target, name, delay = 0 }) {
   ) {
     throw new Error("waitOnEventOrTimeout - invalid parameters.");
   }
-  const { promise, resolve } = Promise.withResolvers();
+  const { promise, resolve } = Promise.withResolvers<WaitOnTypeValue>();
   const ac = new AbortController();
 
-  function handler(type) {
+  function handler(type: WaitOnTypeValue) {
     ac.abort(); // Remove event listener.
     clearTimeout(timeout);
-
     resolve(type);
   }
 
-  const evtMethod = target instanceof EventBus ? "_on" : "addEventListener";
-  target[evtMethod](name, handler.bind(null, WaitOnType.EVENT), {
-    signal: ac.signal,
-  });
+  if (target instanceof EventBus) {
+    target._on(name, handler.bind(null, WaitOnType.EVENT) as EventBusListener, {
+      signal: ac.signal,
+    });
+  } else {
+    (target as EventTarget).addEventListener(
+      name,
+      handler.bind(null, WaitOnType.EVENT) as EventListener,
+      { signal: ac.signal }
+    );
+  }
 
   const timeout = setTimeout(handler.bind(null, WaitOnType.TIMEOUT), delay);
 
@@ -70,14 +92,9 @@ async function waitOnEventOrTimeout({ target, name, delay = 0 }) {
  * and `off` methods. To raise an event, the `dispatch` method shall be used.
  */
 class EventBus {
-  #listeners = Object.create(null);
+  #listeners: Record<string, ListenerEntry[]> = Object.create(null);
 
-  /**
-   * @param {string} eventName
-   * @param {function} listener
-   * @param {Object} [options]
-   */
-  on(eventName, listener, options = null) {
+  on(eventName: string, listener: EventBusListener, options: EventBusOnOptions = null): void {
     this._on(eventName, listener, {
       external: true,
       once: options?.once,
@@ -85,25 +102,16 @@ class EventBus {
     });
   }
 
-  /**
-   * @param {string} eventName
-   * @param {function} listener
-   * @param {Object} [options]
-   */
-  off(eventName, listener, options = null) {
+  off(eventName: string, listener: EventBusListener, _options: EventBusOnOptions = null): void {
     this._off(eventName, listener);
   }
 
-  /**
-   * @param {string} eventName
-   * @param {Object} data
-   */
-  dispatch(eventName, data) {
+  dispatch(eventName: string, data?: unknown): void {
     const eventListeners = this.#listeners[eventName];
     if (!eventListeners || eventListeners.length === 0) {
       return;
     }
-    let externalListeners;
+    let externalListeners: EventBusListener[] | undefined;
     // Making copy of the listeners array in case if it will be modified
     // during dispatch.
     for (const { listener, external, once } of eventListeners.slice(0)) {
@@ -122,15 +130,15 @@ class EventBus {
       for (const listener of externalListeners) {
         listener(data);
       }
-      externalListeners = null;
+      externalListeners = undefined;
     }
   }
 
   /**
    * @ignore
    */
-  _on(eventName, listener, options = null) {
-    let rmAbort = null;
+  _on(eventName: string, listener: EventBusListener, options: EventBusInternalOptions = null): void {
+    let rmAbort: (() => void) | null = null;
     if (options?.signal instanceof AbortSignal) {
       const { signal } = options;
       if (signal.aborted) {
@@ -155,7 +163,7 @@ class EventBus {
   /**
    * @ignore
    */
-  _off(eventName, listener, options = null) {
+  _off(eventName: string, listener: EventBusListener, _options: EventBusOnOptions = null): void {
     const eventListeners = this.#listeners[eventName];
     if (!eventListeners) {
       return;
@@ -171,24 +179,32 @@ class EventBus {
   }
 }
 
+interface ExternalServices {
+  dispatchGlobalEvent(event: { eventName: string; detail: unknown }): void;
+}
+
 /**
  * NOTE: Only used in the Firefox built-in pdf viewer.
  */
 class FirefoxEventBus extends EventBus {
-  #externalServices;
+  #externalServices: ExternalServices;
 
-  #globalEventNames;
+  #globalEventNames: Set<string>;
 
-  #isInAutomation;
+  #isInAutomation: boolean;
 
-  constructor(globalEventNames, externalServices, isInAutomation) {
+  constructor(
+    globalEventNames: Set<string>,
+    externalServices: ExternalServices,
+    isInAutomation: boolean
+  ) {
     super();
     this.#globalEventNames = globalEventNames;
     this.#externalServices = externalServices;
     this.#isInAutomation = isInAutomation;
   }
 
-  dispatch(eventName, data) {
+  dispatch(eventName: string, data?: unknown): void {
     if (typeof PDFJSDev !== "undefined" && !PDFJSDev.test("MOZCENTRAL")) {
       throw new Error("Not implemented: FirefoxEventBus.dispatch");
     }
@@ -197,8 +213,8 @@ class FirefoxEventBus extends EventBus {
     if (this.#isInAutomation) {
       const detail = Object.create(null);
       if (data) {
-        for (const key in data) {
-          const value = data[key];
+        for (const key in data as Record<string, unknown>) {
+          const value = (data as Record<string, unknown>)[key];
           if (key === "source") {
             if (value === window || value === document) {
               return; // No need to re-dispatch (already) global events.

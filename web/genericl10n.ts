@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { FeatureTest, fetchData } from "pdfjs-lib";
 import { FluentBundle, FluentResource } from "fluent-bundle";
 import { DOMLocalization } from "fluent-dom";
@@ -37,7 +35,7 @@ function PLATFORM() {
   return "other";
 }
 
-function createBundle(lang, text) {
+function createBundle(lang: string, text: string) {
   const resource = new FluentResource(text);
   const bundle = new FluentBundle(lang, {
     functions: { PLATFORM },
@@ -50,7 +48,7 @@ function createBundle(lang, text) {
 }
 
 class GenericL10n extends L10n {
-  constructor(lang) {
+  constructor(lang: string = "") {
     super({ lang });
 
     const generateBundles = !lang
@@ -72,7 +70,7 @@ class GenericL10n extends L10n {
    *   translations.
    * @param {String} baseLang - The base language to use for translations.
    */
-  static async *#generateBundles(defaultLang, baseLang) {
+  static async *#generateBundles(defaultLang: string, baseLang: string) {
     const { baseURL, paths } = await this.#getPaths();
 
     const langs = [baseLang];
@@ -87,10 +85,9 @@ class GenericL10n extends L10n {
       langs.push(defaultLang);
     }
     // Trigger fetching of bundles in parallel, to reduce overall load time.
-    const bundles = langs.map(lang => [
-      lang,
-      this.#createBundle(lang, baseURL, paths),
-    ]);
+    const bundles = langs.map(lang =>
+      [lang, this.#createBundle(lang, baseURL, paths)] as const
+    );
 
     for (const [lang, bundlePromise] of bundles) {
       const bundle = await bundlePromise;
@@ -102,7 +99,7 @@ class GenericL10n extends L10n {
     }
   }
 
-  static async #createBundle(lang, baseURL, paths) {
+  static async #createBundle(lang: string, baseURL: string, paths: Record<string, string>) {
     const path = paths[lang];
     if (!path) {
       return null;
@@ -115,7 +112,7 @@ class GenericL10n extends L10n {
 
   static async #getPaths() {
     try {
-      const { href } = document.querySelector(`link[type="application/l10n"]`);
+      const { href } = document.querySelector(`link[type="application/l10n"]`) as HTMLLinkElement;
       const paths = await fetchData(href, /* type = */ "json");
 
       return {
@@ -126,11 +123,11 @@ class GenericL10n extends L10n {
     return { baseURL: "./", paths: Object.create(null) };
   }
 
-  static async *#generateBundlesFallback(lang) {
+  static async *#generateBundlesFallback(lang: string) {
     yield this.#createBundleFallback(lang);
   }
 
-  static async #createBundleFallback(lang) {
+  static async #createBundleFallback(lang: string) {
     if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("TESTING")) {
       throw new Error("Not implemented: #createBundleFallback");
     }

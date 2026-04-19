@@ -13,12 +13,29 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { AnnotationType, createValidAbsoluteUrl, Util } from "pdfjs-lib";
 import { getOriginalIndex, normalize } from "./pdf_find_controller.js";
 
-function DOMRectToPDF({ width, height, left, top }, pdfPageView) {
+interface PDFPageView {
+  textLayer: { div: Element };
+  getPagePoint(x: number, y: number): [number, number];
+  _textHighlighter: {
+    textDivs: HTMLElement[];
+    textContentItemsStr: string[];
+    _convertMatches(
+      indices: number[],
+      lengths: number[]
+    ): Array<{
+      begin: { divIdx: number; offset: number };
+      end: { divIdx: number; offset: number };
+    }>;
+  };
+}
+
+function DOMRectToPDF(
+  { width, height, left, top }: { width: number; height: number; left: number; top: number },
+  pdfPageView: PDFPageView
+): [number, number, number, number] | null {
   if (width === 0 || height === 0) {
     return null;
   }
@@ -38,17 +55,20 @@ function DOMRectToPDF({ width, height, left, top }, pdfPageView) {
     bottomLeft[1],
     topRight[0],
     topRight[1],
-  ]);
+  ]) as [number, number, number, number];
 }
 
-function calculateLinkPosition(range, pdfPageView) {
+function calculateLinkPosition(
+  range: Range,
+  pdfPageView: PDFPageView
+): { rect: [number, number, number, number] | null; quadPoints?: number[] } {
   const rangeRects = range.getClientRects();
   if (rangeRects.length === 1) {
     return { rect: DOMRectToPDF(rangeRects[0], pdfPageView) };
   }
 
-  const rect = [Infinity, Infinity, -Infinity, -Infinity];
-  const quadPoints = [];
+  const rect: number[] = [Infinity, Infinity, -Infinity, -Infinity];
+  const quadPoints: number[] = [];
   let i = 0;
   for (const domRect of rangeRects) {
     const normalized = DOMRectToPDF(domRect, pdfPageView);
@@ -64,7 +84,7 @@ function calculateLinkPosition(range, pdfPageView) {
     Util.rectBoundingBox(...normalized, rect);
     i += 8;
   }
-  return { quadPoints, rect };
+  return { quadPoints, rect: rect as [number, number, number, number] };
 }
 
 /**
@@ -83,11 +103,11 @@ function calculateLinkPosition(range, pdfPageView) {
  * textPosition(p, 5) -> [#text "def", 2] (between `e` and `f`)
  * textPosition(p, 6) -> [#text "def", 3] (after `f`)
  */
-function textPosition(container, offset) {
+function textPosition(container: Node, offset: number): [Node, number] {
   let currentContainer = container;
   do {
     if (currentContainer.nodeType === Node.TEXT_NODE) {
-      const currentLength = currentContainer.textContent.length;
+      const currentLength = currentContainer.textContent!.length;
       if (offset <= currentLength) {
         return [currentContainer, offset];
       }
@@ -98,16 +118,20 @@ function textPosition(container, offset) {
     }
 
     while (!currentContainer.nextSibling && currentContainer !== container) {
-      currentContainer = currentContainer.parentNode;
+      currentContainer = currentContainer.parentNode!;
     }
     if (currentContainer !== container) {
-      currentContainer = currentContainer.nextSibling;
+      currentContainer = currentContainer.nextSibling!;
     }
   } while (currentContainer !== container);
   throw new Error("Offset is bigger than container's contents length.");
 }
 
-function createLinkAnnotation({ url, index, length }, pdfPageView, id) {
+function createLinkAnnotation(
+  { url, index, length }: { url: string; index: number; length: number },
+  pdfPageView: PDFPageView,
+  id: number
+) {
   const highlighter = pdfPageView._textHighlighter;
   const [{ begin, end }] = highlighter._convertMatches([index], [length]);
 
@@ -133,11 +157,11 @@ function createLinkAnnotation({ url, index, length }, pdfPageView, id) {
 class Autolinker {
   static #index = 0;
 
-  static #regex;
+  static #regex: RegExp | undefined;
 
-  static #numericTLDRegex;
+  static #numericTLDRegex: RegExp | undefined;
 
-  static findLinks(text) {
+  static findLinks(text: string) {
     // Regex can be tested and verified at https://regex101.com/r/rXoLiT/2.
     this.#regex ??=
       /\b(?:https?:\/\/|mailto:|www\.)(?:[\S--[\p{P}<>]]|\/|[\S--[\[\]]]+[\S--[\p{P}<>]])+|(?=\p{L})[\S--[@\p{Ps}\p{Pe}<>]]+@([\S--[[\p{P}--\-]<>]]+(?:\.[\S--[[\p{P}--\-]<>]]+)+)/gmv;
@@ -182,7 +206,7 @@ class Autolinker {
     return links;
   }
 
-  static processLinks(pdfPageView) {
+  static processLinks(pdfPageView: PDFPageView) {
     return this.findLinks(
       pdfPageView._textHighlighter.textContentItemsStr.join("\n")
     ).map(link => createLinkAnnotation(link, pdfPageView, this.#index++));

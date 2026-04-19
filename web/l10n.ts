@@ -13,28 +13,38 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+interface IL10nProvider {
+  formatMessages(
+    ids: Array<{ id: string; args?: Record<string, string> | null }>
+  ): Promise<Array<{ value: string | null }>>;
+  connectRoot(element: HTMLElement): void;
+  translateRoots(): Promise<void>;
+  translateElements(elements: HTMLElement[]): Promise<void>;
+  disconnectRoot(element: HTMLElement): void;
+  pauseObserving(): void;
+  resumeObserving(): void;
+}
 
 /**
  * NOTE: The L10n-implementations should use lowercase language-codes
  *       internally.
  */
 class L10n {
-  #dir;
+  #dir: string;
 
-  #elements;
+  #elements: Set<HTMLElement> | null = null;
 
-  #lang;
+  #lang: string;
 
-  #l10n;
+  #l10n: IL10nProvider | null;
 
-  constructor({ lang, isRTL }, l10n = null) {
+  constructor({ lang, isRTL }: { lang: string; isRTL?: boolean }, l10n: IL10nProvider | null = null) {
     this.#lang = L10n.#fixupLangCode(lang);
     this.#l10n = l10n;
     this.#dir = (isRTL ?? L10n.#isRTL(this.#lang)) ? "rtl" : "ltr";
   }
 
-  _setL10n(l10n) {
+  _setL10n(l10n: IL10nProvider): void {
     this.#l10n = l10n;
     if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("TESTING")) {
       document.l10n = l10n;
@@ -42,75 +52,73 @@ class L10n {
   }
 
   /** @inheritdoc */
-  getLanguage() {
+  getLanguage(): string {
     return this.#lang;
   }
 
   /** @inheritdoc */
-  getDirection() {
+  getDirection(): string {
     return this.#dir;
   }
 
   /** @inheritdoc */
-  async get(ids, args = null, fallback) {
+  async get(
+    ids: string | string[],
+    args: Record<string, string> | null = null,
+    fallback?: string
+  ): Promise<string | string[]> {
     if (Array.isArray(ids)) {
-      ids = ids.map(id => ({ id }));
-      const messages = await this.#l10n.formatMessages(ids);
-      return messages.map(message => message.value);
+      const messages = await this.#l10n!.formatMessages(ids.map(id => ({ id })));
+      return messages.map(message => message.value as string);
     }
 
-    const messages = await this.#l10n.formatMessages([
-      {
-        id: ids,
-        args,
-      },
-    ]);
-    return messages[0]?.value || fallback;
+    const messages = await this.#l10n!.formatMessages([{ id: ids, args }]);
+    return (messages[0]?.value ?? fallback) as string;
   }
 
   /** @inheritdoc */
-  async translate(element) {
+  async translate(element: HTMLElement): Promise<void> {
     (this.#elements ||= new Set()).add(element);
     try {
-      this.#l10n.connectRoot(element);
-      await this.#l10n.translateRoots();
+      this.#l10n!.connectRoot(element);
+      await this.#l10n!.translateRoots();
     } catch {
       // Element is under an existing root, so there is no need to add it again.
     }
   }
 
   /** @inheritdoc */
-  async translateOnce(element) {
+  async translateOnce(element: HTMLElement): Promise<void> {
     try {
-      await this.#l10n.translateElements([element]);
+      await this.#l10n!.translateElements([element]);
     } catch (ex) {
       console.error("translateOnce:", ex);
     }
   }
 
   /** @inheritdoc */
-  async destroy() {
+  async destroy(): Promise<void> {
     if (this.#elements) {
       for (const element of this.#elements) {
-        this.#l10n.disconnectRoot(element);
+        this.#l10n!.disconnectRoot(element);
       }
       this.#elements.clear();
       this.#elements = null;
     }
-    this.#l10n.pauseObserving();
+    this.#l10n!.pauseObserving();
   }
 
   /** @inheritdoc */
-  pause() {
-    this.#l10n.pauseObserving();
+  pause(): void {
+    this.#l10n!.pauseObserving();
   }
 
   /** @inheritdoc */
-  resume() {
-    this.#l10n.resumeObserving();
+  resume(): void {
+    this.#l10n!.resumeObserving();
   }
 
-  static #fixupLangCode(langCode) {
+  static #fixupLangCode(langCode: string | null | undefined): string {
     // Use only lowercase language-codes internally, and fallback to English.
     langCode = langCode?.toLowerCase() || "en-us";
 
@@ -131,10 +139,10 @@ class L10n {
       sv: "sv-se",
       zh: "zh-cn",
     };
-    return PARTIAL_LANG_CODES[langCode] || langCode;
+    return PARTIAL_LANG_CODES[langCode as keyof typeof PARTIAL_LANG_CODES] ?? langCode;
   }
 
-  static #isRTL(lang) {
+  static #isRTL(lang: string): boolean {
     const shortCode = lang.split("-", 1)[0];
     return ["ar", "he", "fa", "ps", "ur"].includes(shortCode);
   }

@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
 
 /** @typedef {import("./api").PDFPageProxy} PDFPageProxy */
 /** @typedef {import("./display_utils").PageViewport} PageViewport */
@@ -78,7 +77,7 @@ class AnnotationElementFactory {
    * @param {AnnotationElementParameters} parameters
    * @returns {AnnotationElement}
    */
-  static create(parameters) {
+  static create(parameters: any) {
     const subtype = parameters.data.annotationType;
 
     switch (subtype) {
@@ -160,19 +159,39 @@ class AnnotationElementFactory {
 }
 
 class AnnotationElement {
-  #updates = null;
+  #updates: any = null;
 
   #hasBorder = false;
 
-  #popupElement = null;
+  #popupElement: any = null;
+
+  declare isRenderable: any;
+  declare data: any;
+  declare layer: any;
+  declare linkService: any;
+  declare downloadManager: any;
+  declare imageResourcesPath: any;
+  declare renderForms: any;
+  declare svgFactory: any;
+  declare annotationStorage: any;
+  declare enableComment: any;
+  declare enableScripting: any;
+  declare hasJSActions: any;
+  declare _fieldObjects: any;
+  declare parent: any;
+  declare hasOwnCommentButton: any;
+  declare contentElement: any;
+  declare container: any;
+  declare popup: any;
+  declare annotationEditorType: any;
 
   constructor(
-    parameters,
+    parameters: any,
     {
       isRenderable = false,
       ignoreBorder = false,
       createQuadrilaterals = false,
-    } = {}
+    }: any = {}
   ) {
     this.isRenderable = isRenderable;
     this.data = parameters.data;
@@ -199,7 +218,7 @@ class AnnotationElement {
     }
   }
 
-  static _hasPopupData({ contentsObj, richText }) {
+  static _hasPopupData({ contentsObj, richText }: any) {
     return !!(contentsObj?.str || richText?.str);
   }
 
@@ -267,7 +286,7 @@ class AnnotationElement {
     return null;
   }
 
-  _normalizePoint(point) {
+  _normalizePoint(point: any) {
     const {
       page: { view },
       viewport: {
@@ -313,7 +332,7 @@ class AnnotationElement {
     this.#popupElement = this.popup = null;
   }
 
-  updateEdited(params) {
+  updateEdited(params: any) {
     if (!this.container) {
       return;
     }
@@ -355,7 +374,7 @@ class AnnotationElement {
     this.#updates = null;
   }
 
-  #setRectEdited(rect) {
+  #setRectEdited(rect: any) {
     const {
       container: { style },
       data: { rect: currentRect, rotation },
@@ -384,7 +403,7 @@ class AnnotationElement {
    * @memberof AnnotationElement
    * @returns {HTMLElement} A section element.
    */
-  _createContainer(ignoreBorder) {
+  _createContainer(ignoreBorder: any) {
     const {
       data,
       parent: { page, viewport },
@@ -467,10 +486,10 @@ class AnnotationElement {
       const borderColor = data.borderColor || null;
       if (borderColor) {
         this.#hasBorder = true;
-        style.borderColor = Util.makeHexColor(...borderColor);
+        style.borderColor = Util.makeHexColor(...(borderColor as [number, number, number]));
       } else {
         // Transparent (invisible) border, so do not draw it at all.
-        style.borderWidth = 0;
+        style.borderWidth = "0";
       }
     }
 
@@ -498,7 +517,7 @@ class AnnotationElement {
     return container;
   }
 
-  setRotation(angle, container = this.container) {
+  setRotation(angle: any, container = this.container) {
     if (!this.data.rect) {
       return;
     }
@@ -515,19 +534,19 @@ class AnnotationElement {
   }
 
   get _commonActions() {
-    const setColor = (jsName, styleName, event) => {
+    const setColor = (jsName: any, styleName: any, event: any) => {
       const color = event.detail[jsName];
       const colorType = color[0];
       const colorArray = color.slice(1);
       event.target.style[styleName] =
-        ColorConverters[`${colorType}_HTML`](colorArray);
+        (ColorConverters as any)[`${colorType}_HTML`](colorArray);
       this.annotationStorage.setValue(this.data.id, {
-        [styleName]: ColorConverters[`${colorType}_rgb`](colorArray),
+        [styleName]: (ColorConverters as any)[`${colorType}_rgb`](colorArray),
       });
     };
 
     return shadow(this, "_commonActions", {
-      display: event => {
+      display: (event: any) => {
         const { display } = event.detail;
         // See scripting/constants.js for the values of `Display`.
         // 0 = visible, 1 = hidden, 2 = noPrint and 3 = noView.
@@ -538,12 +557,12 @@ class AnnotationElement {
           noPrint: display === 1 || display === 2,
         });
       },
-      print: event => {
+      print: (event: any) => {
         this.annotationStorage.setValue(this.data.id, {
           noPrint: !event.detail.print,
         });
       },
-      hidden: event => {
+      hidden: (event: any) => {
         const { hidden } = event.detail;
         this.container.style.visibility = hidden ? "hidden" : "visible";
         this.annotationStorage.setValue(this.data.id, {
@@ -551,38 +570,38 @@ class AnnotationElement {
           noView: hidden,
         });
       },
-      focus: event => {
+      focus: (event: any) => {
         setTimeout(() => event.target.focus({ preventScroll: false }), 0);
       },
-      userName: event => {
+      userName: (event: any) => {
         // tooltip
         event.target.title = event.detail.userName;
       },
-      readonly: event => {
+      readonly: (event: any) => {
         event.target.disabled = event.detail.readonly;
       },
-      required: event => {
-        this._setRequired(event.target, event.detail.required);
+      required: (event: any) => {
+        (this as any)._setRequired(event.target, event.detail.required);
       },
-      bgColor: event => {
+      bgColor: (event: any) => {
         setColor("bgColor", "backgroundColor", event);
       },
-      fillColor: event => {
+      fillColor: (event: any) => {
         setColor("fillColor", "backgroundColor", event);
       },
-      fgColor: event => {
+      fgColor: (event: any) => {
         setColor("fgColor", "color", event);
       },
-      textColor: event => {
+      textColor: (event: any) => {
         setColor("textColor", "color", event);
       },
-      borderColor: event => {
+      borderColor: (event: any) => {
         setColor("borderColor", "borderColor", event);
       },
-      strokeColor: event => {
+      strokeColor: (event: any) => {
         setColor("strokeColor", "borderColor", event);
       },
-      rotation: event => {
+      rotation: (event: any) => {
         const angle = event.detail.rotation;
         this.setRotation(angle);
         this.annotationStorage.setValue(this.data.id, {
@@ -592,15 +611,15 @@ class AnnotationElement {
     });
   }
 
-  _dispatchEventFromSandbox(actions, jsEvent) {
-    const commonActions = this._commonActions;
+  _dispatchEventFromSandbox(actions: any, jsEvent: any) {
+    const commonActions: any = this._commonActions;
     for (const name of Object.keys(jsEvent.detail)) {
       const action = actions[name] || commonActions[name];
       action?.(jsEvent);
     }
   }
 
-  _setDefaultPropertiesFromJS(element) {
+  _setDefaultPropertiesFromJS(element: any) {
     if (!this.enableScripting) {
       return;
     }
@@ -611,7 +630,7 @@ class AnnotationElement {
       return;
     }
 
-    const commonActions = this._commonActions;
+    const commonActions: any = this._commonActions;
     for (const [actionName, detail] of Object.entries(storedData)) {
       const action = commonActions[actionName];
       if (action) {
@@ -643,7 +662,7 @@ class AnnotationElement {
       return;
     }
 
-    const [rectBlX, rectBlY, rectTrX, rectTrY] = this.data.rect.map(x =>
+    const [rectBlX, rectBlY, rectTrX, rectTrY] = this.data.rect.map((x: any) =>
       Math.fround(x)
     );
 
@@ -662,10 +681,10 @@ class AnnotationElement {
     }
 
     const { style } = this.container;
-    let svgBuffer;
+    let svgBuffer: string[] | undefined;
     if (this.#hasBorder) {
       const { borderColor, borderWidth } = style;
-      style.borderWidth = 0;
+      style.borderWidth = "0";
       svgBuffer = [
         "url('data:image/svg+xml;utf8,",
         `<svg xmlns="http://www.w3.org/2000/svg"`,
@@ -717,8 +736,8 @@ class AnnotationElement {
     }
 
     if (this.#hasBorder) {
-      svgBuffer.push(`</g></svg>')`);
-      style.backgroundImage = svgBuffer.join("");
+      svgBuffer!.push(`</g></svg>')`);
+      style.backgroundImage = svgBuffer!.join("");
     }
 
     this.container.append(svg);
@@ -735,7 +754,7 @@ class AnnotationElement {
    * @private
    * @memberof AnnotationElement
    */
-  _createPopup(popupData = null) {
+  _createPopup(popupData: any = null) {
     const { data } = this;
 
     let contentsObj, modificationDate;
@@ -781,7 +800,7 @@ class AnnotationElement {
    * @public
    * @memberof AnnotationElement
    */
-  render() {
+  render(): any {
     unreachable("Abstract method `AnnotationElement.render` called");
   }
 
@@ -789,7 +808,7 @@ class AnnotationElement {
    * @private
    * @returns {Array}
    */
-  _getElementsByName(name, skipId = null) {
+  _getElementsByName(name: any, skipId = null) {
     const fields = [];
 
     if (this._fieldObjects) {
@@ -820,7 +839,7 @@ class AnnotationElement {
     // Fallback to a regular DOM lookup, to ensure that the standalone
     // viewer components won't break.
     for (const domElement of document.getElementsByName(name)) {
-      const { exportValue } = domElement;
+      const { exportValue } = domElement as any;
       const id = domElement.getAttribute("data-element-id");
       if (id === skipId) {
         continue;
@@ -898,7 +917,9 @@ class AnnotationElement {
 }
 
 class EditorAnnotationElement extends AnnotationElement {
-  constructor(parameters) {
+  declare editor: any;
+
+  constructor(parameters: any) {
     super(parameters, { isRenderable: true, ignoreBorder: true });
     this.editor = parameters.editor;
   }
@@ -948,7 +969,9 @@ class EditorAnnotationElement extends AnnotationElement {
 }
 
 class LinkAnnotationElement extends AnnotationElement {
-  constructor(parameters, options = null) {
+  declare isTooltipOnly: any;
+
+  constructor(parameters: any, options: any = null) {
     super(parameters, {
       isRenderable: true,
       ignoreBorder: !!options?.ignoreBorder,
@@ -1027,7 +1050,7 @@ class LinkAnnotationElement extends AnnotationElement {
    * @param {string} [overlaidText]
    * @memberof LinkAnnotationElement
    */
-  _bindLink(link, destination, overlaidText = "") {
+  _bindLink(link: any, destination: any, overlaidText = "") {
     link.href = this.linkService.getDestinationHash(destination);
     link.onclick = () => {
       if (destination) {
@@ -1052,7 +1075,7 @@ class LinkAnnotationElement extends AnnotationElement {
    * @param {string} [overlaidText]
    * @memberof LinkAnnotationElement
    */
-  _bindNamedAction(link, action, overlaidText = "") {
+  _bindNamedAction(link: any, action: any, overlaidText = "") {
     link.href = this.linkService.getAnchorUrl("");
     link.onclick = () => {
       this.linkService.executeNamedAction(action);
@@ -1071,7 +1094,7 @@ class LinkAnnotationElement extends AnnotationElement {
    * @param {string} [overlaidText]
    * @param {string} [dest]
    */
-  #bindAttachment(link, attachment, overlaidText = "", dest = null) {
+  #bindAttachment(link: any, attachment: any, overlaidText = "", dest = null) {
     link.href = this.linkService.getAnchorUrl("");
     if (attachment.description) {
       link.title = attachment.description;
@@ -1095,7 +1118,7 @@ class LinkAnnotationElement extends AnnotationElement {
    * @param {Object} action
    * @param {string} [overlaidText]
    */
-  #bindSetOCGState(link, action, overlaidText = "") {
+  #bindSetOCGState(link: any, action: any, overlaidText = "") {
     link.href = this.linkService.getAnchorUrl("");
     link.onclick = () => {
       this.linkService.executeSetOCGState(action);
@@ -1115,7 +1138,7 @@ class LinkAnnotationElement extends AnnotationElement {
    * @param {Object} data
    * @memberof LinkAnnotationElement
    */
-  _bindJSAction(link, data) {
+  _bindJSAction(link: any, data: any) {
     link.href = this.linkService.getAnchorUrl("");
     const map = new Map([
       ["Action", "onclick"],
@@ -1148,7 +1171,7 @@ class LinkAnnotationElement extends AnnotationElement {
     this.#setInternalLink();
   }
 
-  _bindResetFormAction(link, resetForm) {
+  _bindResetFormAction(link: any, resetForm: any) {
     const otherClickAction = link.onclick;
     if (!otherClickAction) {
       link.href = this.linkService.getAnchorUrl("");
@@ -1184,7 +1207,7 @@ class LinkAnnotationElement extends AnnotationElement {
             fieldIds.add(id);
           }
         }
-        for (const fields of Object.values(this._fieldObjects)) {
+        for (const fields of Object.values(this._fieldObjects) as any[]) {
           for (const field of fields) {
             if (fieldIds.has(field.id) === include) {
               allFields.push(field);
@@ -1192,7 +1215,7 @@ class LinkAnnotationElement extends AnnotationElement {
           }
         }
       } else {
-        for (const fields of Object.values(this._fieldObjects)) {
+        for (const fields of Object.values(this._fieldObjects) as any[]) {
           allFields.push(...fields);
         }
       }
@@ -1252,7 +1275,7 @@ class LinkAnnotationElement extends AnnotationElement {
 }
 
 class TextAnnotationElement extends AnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, { isRenderable: true });
   }
 
@@ -1287,7 +1310,7 @@ class WidgetAnnotationElement extends AnnotationElement {
     return this.container;
   }
 
-  showElementAndHideCanvas(element) {
+  showElementAndHideCanvas(element: any) {
     if (this.data.hasOwnCanvas) {
       if (element.previousSibling?.nodeName === "CANVAS") {
         element.previousSibling.hidden = true;
@@ -1296,14 +1319,14 @@ class WidgetAnnotationElement extends AnnotationElement {
     }
   }
 
-  _getKeyModifier(event) {
+  _getKeyModifier(event: any) {
     return FeatureTest.platform.isMac ? event.metaKey : event.ctrlKey;
   }
 
-  _setEventListener(element, elementData, baseName, eventName, valueGetter) {
+  _setEventListener(element: any, elementData: any, baseName: any, eventName: any, valueGetter: any) {
     if (baseName.includes("mouse")) {
       // Mouse events
-      element.addEventListener(baseName, event => {
+      element.addEventListener(baseName, (event: any) => {
         this.linkService.eventBus?.dispatch("dispatcheventinsandbox", {
           source: this,
           detail: {
@@ -1317,7 +1340,7 @@ class WidgetAnnotationElement extends AnnotationElement {
       });
     } else {
       // Non-mouse events
-      element.addEventListener(baseName, event => {
+      element.addEventListener(baseName, (event: any) => {
         if (baseName === "blur") {
           if (!elementData.focused || !event.relatedTarget) {
             return;
@@ -1346,7 +1369,7 @@ class WidgetAnnotationElement extends AnnotationElement {
     }
   }
 
-  _setEventListeners(element, elementData, names, getter) {
+  _setEventListeners(element: any, elementData: any, names: any, getter: any) {
     for (const [baseName, eventName] of names) {
       if (eventName === "Action" || this.data.actions?.[eventName]) {
         if (eventName === "Focus" || eventName === "Blur") {
@@ -1369,10 +1392,10 @@ class WidgetAnnotationElement extends AnnotationElement {
     }
   }
 
-  _setBackgroundColor(element) {
+  _setBackgroundColor(element: any) {
     const color = this.data.backgroundColor || null;
     element.style.backgroundColor =
-      color === null ? "transparent" : Util.makeHexColor(...color);
+      color === null ? "transparent" : Util.makeHexColor(...(color as [number, number, number]));
   }
 
   /**
@@ -1382,7 +1405,7 @@ class WidgetAnnotationElement extends AnnotationElement {
    * @param {HTMLDivElement} element
    * @memberof TextWidgetAnnotationElement
    */
-  _setTextStyle(element) {
+  _setTextStyle(element: any) {
     const TEXT_ALIGNMENT = ["left", "center", "right"];
     const { fontColor } = this.data.defaultAppearanceData;
     const fontSize =
@@ -1401,7 +1424,7 @@ class WidgetAnnotationElement extends AnnotationElement {
     // so in this case use the one we've in the pdf (hence the min).
     let computedFontSize;
     const BORDER_SIZE = 2;
-    const roundToOneDecimal = x => Math.round(10 * x) / 10;
+    const roundToOneDecimal = (x: any) => Math.round(10 * x) / 10;
     if (this.data.multiLine) {
       const height = Math.abs(
         this.data.rect[3] - this.data.rect[1] - BORDER_SIZE
@@ -1423,14 +1446,14 @@ class WidgetAnnotationElement extends AnnotationElement {
     }
     style.fontSize = `calc(${computedFontSize}px * var(--total-scale-factor))`;
 
-    style.color = Util.makeHexColor(...fontColor);
+    style.color = Util.makeHexColor(...(fontColor as [number, number, number]));
 
     if (this.data.textAlignment !== null) {
       style.textAlign = TEXT_ALIGNMENT[this.data.textAlignment];
     }
   }
 
-  _setRequired(element, isRequired) {
+  _setRequired(element: any, isRequired: any) {
     if (isRequired) {
       element.setAttribute("required", true);
     } else {
@@ -1441,7 +1464,7 @@ class WidgetAnnotationElement extends AnnotationElement {
 }
 
 class TextWidgetAnnotationElement extends WidgetAnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     const isRenderable =
       parameters.renderForms ||
       parameters.data.hasOwnCanvas ||
@@ -1449,14 +1472,14 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
     super(parameters, { isRenderable });
   }
 
-  setPropertyOnSiblings(base, key, value, keyInStorage) {
+  setPropertyOnSiblings(base: any, key: any, value: any, keyInStorage: any) {
     const storage = this.annotationStorage;
     for (const element of this._getElementsByName(
       base.name,
       /* skipId = */ base.id
     )) {
       if (element.domElement) {
-        element.domElement[key] = value;
+        (element.domElement as any)[key] = value;
       }
       storage.setValue(element.id, { [keyInStorage]: value });
     }
@@ -1468,7 +1491,7 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
 
     this.container.classList.add("textWidgetAnnotation");
 
-    let element = null;
+    let element: any = null;
     if (this.renderForms) {
       // NOTE: We cannot set the values using `element.value` below, since it
       //       prevents the AnnotationLayer rasterizer in `test/driver.js`
@@ -1534,7 +1557,7 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
         element.maxLength = maxLen;
       }
 
-      element.addEventListener("input", event => {
+      element.addEventListener("input", (event: any) => {
         storage.setValue(id, { value: event.target.value });
         this.setPropertyOnSiblings(
           element,
@@ -1545,13 +1568,13 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
         elementData.formattedValue = null;
       });
 
-      element.addEventListener("resetform", event => {
+      element.addEventListener("resetform", (event: any) => {
         const defaultValue = this.data.defaultFieldValue ?? "";
         element.value = elementData.userValue = defaultValue;
         elementData.formattedValue = null;
       });
 
-      let blurListener = event => {
+      let blurListener: any = (event: any) => {
         const { formattedValue } = elementData;
         if (formattedValue !== null && formattedValue !== undefined) {
           event.target.value = formattedValue;
@@ -1561,7 +1584,7 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
       };
 
       if (this.enableScripting && this.hasJSActions) {
-        element.addEventListener("focus", event => {
+        element.addEventListener("focus", (event: any) => {
           if (elementData.focused) {
             return;
           }
@@ -1602,10 +1625,10 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
           }
         });
 
-        element.addEventListener("updatefromsandbox", jsEvent => {
+        element.addEventListener("updatefromsandbox", (jsEvent: any) => {
           this.showElementAndHideCanvas(jsEvent.target);
           const actions = {
-            value(event) {
+            value(event: any) {
               elementData.userValue = event.detail.value ?? "";
               if (!hasDateOrTime) {
                 storage.setValue(id, {
@@ -1614,7 +1637,7 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
               }
               event.target.value = elementData.userValue;
             },
-            formattedValue(event) {
+            formattedValue(event: any) {
               const { formattedValue } = event.detail;
               elementData.formattedValue = formattedValue;
               if (
@@ -1625,7 +1648,7 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
                 // Input hasn't the focus so display formatted string
                 event.target.value = formattedValue;
               }
-              const data = {
+              const data: any = {
                 formattedValue,
               };
               if (hasDateOrTime) {
@@ -1636,10 +1659,10 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
               }
               storage.setValue(id, data);
             },
-            selRange(event) {
+            selRange(event: any) {
               event.target.setSelectionRange(...event.detail.selRange);
             },
-            charLimit: event => {
+            charLimit: (event: any) => {
               const { charLimit } = event.detail;
               const { target } = event;
               if (charLimit === 0) {
@@ -1675,7 +1698,7 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
 
         // Even if the field hasn't any actions
         // leaving it can still trigger some actions with Calculate
-        element.addEventListener("keydown", event => {
+        element.addEventListener("keydown", (event: any) => {
           elementData.commitKey = 1;
           // If the key is one of Escape, Enter then the data are committed.
           // If we've a Tab then data will be committed on blur.
@@ -1715,7 +1738,7 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
         });
         const _blurListener = blurListener;
         blurListener = null;
-        element.addEventListener("blur", event => {
+        element.addEventListener("blur", (event: any) => {
           if (!elementData.focused || !event.relatedTarget) {
             return;
           }
@@ -1726,7 +1749,7 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
           let { value } = target;
           if (hasDateOrTime) {
             if (value && datetimeType === "time") {
-              const parts = value.split(":").map(v => parseInt(v, 10));
+              const parts = value.split(":").map((v: any) => parseInt(v, 10));
               value = new Date(
                 2000,
                 0,
@@ -1768,7 +1791,7 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
         });
 
         if (this.data.actions?.Keystroke) {
-          element.addEventListener("beforeinput", event => {
+          element.addEventListener("beforeinput", (event: any) => {
             elementData.lastCommittedValue = null;
             const { data, target } = event;
             const { value, selectionStart, selectionEnd } = target;
@@ -1836,7 +1859,7 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
             ["mouseleave", "Mouse Exit"],
             ["mouseup", "Mouse Up"],
           ],
-          event => event.target.value
+          (event: any) => event.target.value
         );
       }
 
@@ -1872,13 +1895,13 @@ class TextWidgetAnnotationElement extends WidgetAnnotationElement {
 }
 
 class SignatureWidgetAnnotationElement extends WidgetAnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, { isRenderable: !!parameters.data.hasOwnCanvas });
   }
 }
 
 class CheckboxWidgetAnnotationElement extends WidgetAnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, { isRenderable: parameters.renderForms });
   }
 
@@ -1906,32 +1929,32 @@ class CheckboxWidgetAnnotationElement extends WidgetAnnotationElement {
     element.type = "checkbox";
     element.name = data.fieldName;
     if (value) {
-      element.setAttribute("checked", true);
+      element.setAttribute("checked", "true");
     }
     element.setAttribute("exportValue", data.exportValue);
     element.tabIndex = 0;
 
-    element.addEventListener("change", event => {
+    element.addEventListener("change", (event: any) => {
       const { name, checked } = event.target;
       for (const checkbox of this._getElementsByName(name, /* skipId = */ id)) {
         const curChecked = checked && checkbox.exportValue === data.exportValue;
         if (checkbox.domElement) {
-          checkbox.domElement.checked = curChecked;
+          (checkbox.domElement as any).checked = curChecked;
         }
         storage.setValue(checkbox.id, { value: curChecked });
       }
       storage.setValue(id, { value: checked });
     });
 
-    element.addEventListener("resetform", event => {
+    element.addEventListener("resetform", (event: any) => {
       const defaultValue = data.defaultFieldValue || "Off";
       event.target.checked = defaultValue === data.exportValue;
     });
 
     if (this.enableScripting && this.hasJSActions) {
-      element.addEventListener("updatefromsandbox", jsEvent => {
+      element.addEventListener("updatefromsandbox", (jsEvent: any) => {
         const actions = {
-          value(event) {
+          value(event: any) {
             event.target.checked = event.detail.value !== "Off";
             storage.setValue(id, { value: event.target.checked });
           },
@@ -1952,7 +1975,7 @@ class CheckboxWidgetAnnotationElement extends WidgetAnnotationElement {
           ["mouseleave", "Mouse Exit"],
           ["mouseup", "Mouse Up"],
         ],
-        event => event.target.checked
+        (event: any) => event.target.checked
       );
     }
 
@@ -1965,7 +1988,7 @@ class CheckboxWidgetAnnotationElement extends WidgetAnnotationElement {
 }
 
 class RadioButtonWidgetAnnotationElement extends WidgetAnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, { isRenderable: parameters.renderForms });
   }
 
@@ -2007,11 +2030,11 @@ class RadioButtonWidgetAnnotationElement extends WidgetAnnotationElement {
     element.type = "radio";
     element.name = data.fieldName;
     if (value) {
-      element.setAttribute("checked", true);
+      element.setAttribute("checked", "true");
     }
     element.tabIndex = 0;
 
-    element.addEventListener("change", event => {
+    element.addEventListener("change", (event: any) => {
       const { name, checked } = event.target;
       for (const radio of this._getElementsByName(name, /* skipId = */ id)) {
         storage.setValue(radio.id, { value: false });
@@ -2019,7 +2042,7 @@ class RadioButtonWidgetAnnotationElement extends WidgetAnnotationElement {
       storage.setValue(id, { value: checked });
     });
 
-    element.addEventListener("resetform", event => {
+    element.addEventListener("resetform", (event: any) => {
       const defaultValue = data.defaultFieldValue;
       event.target.checked =
         defaultValue !== null &&
@@ -2029,14 +2052,14 @@ class RadioButtonWidgetAnnotationElement extends WidgetAnnotationElement {
 
     if (this.enableScripting && this.hasJSActions) {
       const pdfButtonValue = data.buttonValue;
-      element.addEventListener("updatefromsandbox", jsEvent => {
+      element.addEventListener("updatefromsandbox", (jsEvent: any) => {
         const actions = {
-          value: event => {
+          value: (event: any) => {
             const checked = pdfButtonValue === event.detail.value;
             for (const radio of this._getElementsByName(event.target.name)) {
               const curChecked = checked && radio.id === id;
               if (radio.domElement) {
-                radio.domElement.checked = curChecked;
+                (radio.domElement as any).checked = curChecked;
               }
               storage.setValue(radio.id, { value: curChecked });
             }
@@ -2058,7 +2081,7 @@ class RadioButtonWidgetAnnotationElement extends WidgetAnnotationElement {
           ["mouseleave", "Mouse Exit"],
           ["mouseup", "Mouse Up"],
         ],
-        event => event.target.checked
+        (event: any) => event.target.checked
       );
     }
 
@@ -2071,7 +2094,7 @@ class RadioButtonWidgetAnnotationElement extends WidgetAnnotationElement {
 }
 
 class PushButtonWidgetAnnotationElement extends LinkAnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, { ignoreBorder: parameters.data.hasAppearance });
   }
 
@@ -2086,7 +2109,7 @@ class PushButtonWidgetAnnotationElement extends LinkAnnotationElement {
     if (this.enableScripting && this.hasJSActions && linkElement) {
       this._setDefaultPropertiesFromJS(linkElement);
 
-      linkElement.addEventListener("updatefromsandbox", jsEvent => {
+      linkElement.addEventListener("updatefromsandbox", (jsEvent: any) => {
         this._dispatchEventFromSandbox({}, jsEvent);
       });
     }
@@ -2096,7 +2119,7 @@ class PushButtonWidgetAnnotationElement extends LinkAnnotationElement {
 }
 
 class ChoiceWidgetAnnotationElement extends WidgetAnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, { isRenderable: parameters.renderForms });
   }
 
@@ -2135,7 +2158,7 @@ class ChoiceWidgetAnnotationElement extends WidgetAnnotationElement {
       }
     });
 
-    const fixDisplayValue = (option, value) => {
+    const fixDisplayValue = (option: any, value: any) => {
       const newValue = value.replaceAll(" ", "\u00A0");
       option.textContent = newValue;
       if (newValue !== value) {
@@ -2149,18 +2172,18 @@ class ChoiceWidgetAnnotationElement extends WidgetAnnotationElement {
       fixDisplayValue(optionElement, option.displayValue);
       optionElement.value = option.exportValue;
       if (storedData.value.includes(option.exportValue)) {
-        optionElement.setAttribute("selected", true);
+        optionElement.setAttribute("selected", "true");
         addAnEmptyEntry = false;
       }
       selectElement.append(optionElement);
     }
 
-    let removeEmptyEntry = null;
+    let removeEmptyEntry: any = null;
     if (addAnEmptyEntry) {
       const noneOptionElement = document.createElement("option");
       noneOptionElement.value = " ";
-      noneOptionElement.setAttribute("hidden", true);
-      noneOptionElement.setAttribute("selected", true);
+      noneOptionElement.setAttribute("hidden", "true");
+      noneOptionElement.setAttribute("selected", "true");
       selectElement.prepend(noneOptionElement);
 
       removeEmptyEntry = () => {
@@ -2171,7 +2194,7 @@ class ChoiceWidgetAnnotationElement extends WidgetAnnotationElement {
       selectElement.addEventListener("input", removeEmptyEntry);
     }
 
-    const getValue = isExport => {
+    const getValue = (isExport: any) => {
       const name = isExport ? "value" : "textContent";
       const { options, multiple } = selectElement;
       if (!multiple) {
@@ -2186,7 +2209,7 @@ class ChoiceWidgetAnnotationElement extends WidgetAnnotationElement {
 
     let selectedValues = getValue(/* isExport */ false);
 
-    const getItems = event => {
+    const getItems = (event: any) => {
       const options = event.target.options;
       return Array.prototype.map.call(options, option => ({
         displayValue:
@@ -2196,9 +2219,9 @@ class ChoiceWidgetAnnotationElement extends WidgetAnnotationElement {
     };
 
     if (this.enableScripting && this.hasJSActions) {
-      selectElement.addEventListener("updatefromsandbox", jsEvent => {
+      selectElement.addEventListener("updatefromsandbox", (jsEvent: any) => {
         const actions = {
-          value(event) {
+          value(event: any) {
             removeEmptyEntry?.();
             const value = event.detail.value;
             const values = new Set(Array.isArray(value) ? value : [value]);
@@ -2210,10 +2233,10 @@ class ChoiceWidgetAnnotationElement extends WidgetAnnotationElement {
             });
             selectedValues = getValue(/* isExport */ false);
           },
-          multipleSelection(event) {
+          multipleSelection(event: any) {
             selectElement.multiple = true;
           },
-          remove(event) {
+          remove(event: any) {
             const options = selectElement.options;
             const index = event.detail.remove;
             options[index].selected = false;
@@ -2233,14 +2256,14 @@ class ChoiceWidgetAnnotationElement extends WidgetAnnotationElement {
             });
             selectedValues = getValue(/* isExport */ false);
           },
-          clear(event) {
+          clear(event: any) {
             while (selectElement.length !== 0) {
               selectElement.remove(0);
             }
             storage.setValue(id, { value: null, items: [] });
             selectedValues = getValue(/* isExport */ false);
           },
-          insert(event) {
+          insert(event: any) {
             const { index, displayValue, exportValue } = event.detail.insert;
             const selectChild = selectElement.children[index];
             const optionElement = document.createElement("option");
@@ -2258,7 +2281,7 @@ class ChoiceWidgetAnnotationElement extends WidgetAnnotationElement {
             });
             selectedValues = getValue(/* isExport */ false);
           },
-          items(event) {
+          items(event: any) {
             const { items } = event.detail;
             while (selectElement.length !== 0) {
               selectElement.remove(0);
@@ -2279,7 +2302,7 @@ class ChoiceWidgetAnnotationElement extends WidgetAnnotationElement {
             });
             selectedValues = getValue(/* isExport */ false);
           },
-          indices(event) {
+          indices(event: any) {
             const indices = new Set(event.detail.indices);
             for (const option of event.target.options) {
               option.selected = indices.has(option.index);
@@ -2289,14 +2312,14 @@ class ChoiceWidgetAnnotationElement extends WidgetAnnotationElement {
             });
             selectedValues = getValue(/* isExport */ false);
           },
-          editable(event) {
+          editable(event: any) {
             event.target.disabled = !event.detail.editable;
           },
         };
         this._dispatchEventFromSandbox(actions, jsEvent);
       });
 
-      selectElement.addEventListener("input", event => {
+      selectElement.addEventListener("input", (event: any) => {
         const exportValue = getValue(/* isExport */ true);
         const change = getValue(/* isExport */ false);
         storage.setValue(id, { value: exportValue });
@@ -2331,10 +2354,10 @@ class ChoiceWidgetAnnotationElement extends WidgetAnnotationElement {
           ["input", "Action"],
           ["input", "Validate"],
         ],
-        event => event.target.value
+        (event: any) => event.target.value
       );
     } else {
-      selectElement.addEventListener("input", function (event) {
+      selectElement.addEventListener("input", function (event: any) {
         storage.setValue(id, { value: getValue(/* isExport */ true) });
       });
     }
@@ -2354,7 +2377,9 @@ class ChoiceWidgetAnnotationElement extends WidgetAnnotationElement {
 }
 
 class PopupAnnotationElement extends AnnotationElement {
-  constructor(parameters) {
+  declare elements: any;
+
+  constructor(parameters: any) {
     const { data, elements, parent } = parameters;
     const hasCommentManager = !!parent._commentManager;
     super(parameters, {
@@ -2413,7 +2438,7 @@ class PopupAnnotationElement extends AnnotationElement {
 }
 
 class PopupElement {
-  #commentManager = null;
+  #commentManager: any = null;
 
   #boundKeyDown = this.#keyDown.bind(this);
 
@@ -2423,47 +2448,49 @@ class PopupElement {
 
   #boundToggle = this.#toggle.bind(this);
 
-  #color = null;
+  #color: any = null;
 
-  #container = null;
+  #container: any = null;
 
-  #contentsObj = null;
+  #contentsObj: any = null;
 
-  #dateObj = null;
+  #dateObj: any = null;
 
-  #elements = null;
+  #elements: any = null;
 
-  #parent = null;
+  #parent: any = null;
 
-  #parentRect = null;
+  #parentRect: any = null;
 
   #pinned = false;
 
-  #popup = null;
+  #popup: any = null;
 
-  #popupAbortController = null;
+  #popupAbortController: any = null;
 
-  #position = null;
+  #position: any = null;
 
-  #commentButton = null;
+  #commentButton: any = null;
 
-  #commentButtonPosition = null;
+  #commentButtonPosition: any = null;
 
-  #popupPosition = null;
+  #popupPosition: any = null;
 
-  #rect = null;
+  #rect: any = null;
 
-  #richText = null;
+  #richText: any = null;
 
-  #titleObj = null;
+  #titleObj: any = null;
 
-  #updates = null;
+  #updates: any = null;
 
   #wasVisible = false;
 
-  #firstElement = null;
+  #firstElement: any = null;
 
-  #commentText = null;
+  #commentText: any = null;
+
+  declare trigger: any;
 
   constructor({
     container,
@@ -2478,7 +2505,7 @@ class PopupElement {
     parentRect,
     open,
     commentManager = null,
-  }) {
+  }: any) {
     this.#container = container;
     this.#titleObj = titleObj;
     this.#contentsObj = contentsObj;
@@ -2497,7 +2524,7 @@ class PopupElement {
     this.#dateObj = PDFDateString.toDateObject(modificationDate);
 
     // The elements that will trigger the popup.
-    this.trigger = elements.flatMap(e => e.getElementsToTriggerPopup());
+    this.trigger = elements.flatMap((e: any) => e.getElementsToTriggerPopup());
 
     if (!commentManager) {
       this.#addEventListeners();
@@ -2543,7 +2570,7 @@ class PopupElement {
   }
 
   #setCommentButtonPosition() {
-    const element = this.#elements.find(e => e.hasCommentButton);
+    const element = this.#elements.find((e: any) => e.hasCommentButton);
     if (!element) {
       return;
     }
@@ -2601,7 +2628,7 @@ class PopupElement {
       button.style.zIndex = parentContainer.style.zIndex + 1;
       button.tabIndex = 0;
       button.ariaHasPopup = "dialog";
-      button.ariaControls = "commentPopup";
+      (button as any).ariaControls = "commentPopup";
       button.setAttribute("data-l10n-id", "pdfjs-show-comment-button");
       this.#updateColor();
       this.#updateCommentButtonPosition();
@@ -2700,7 +2727,7 @@ class PopupElement {
     return this.#firstElement.layer.getBoundingClientRect();
   }
 
-  setCommentButtonStates({ selected, hasPopup }) {
+  setCommentButtonStates({ selected, hasPopup }: any) {
     if (!this.#commentButton) {
       return;
     }
@@ -2708,7 +2735,7 @@ class PopupElement {
     this.#commentButton.ariaExpanded = hasPopup;
   }
 
-  setSelectedCommentButton(selected) {
+  setSelectedCommentButton(selected: any) {
     this.#commentButton.classList.toggle("selected", selected);
   }
 
@@ -2745,9 +2772,9 @@ class PopupElement {
     );
   }
 
-  editComment(options) {
+  editComment(options: any) {
     const [posX, posY] =
-      this.#popupPosition || this.commentButtonPosition.map(x => x / 100);
+      this.#popupPosition || this.commentButtonPosition.map((x: any) => x / 100);
     const parentDimensions = this.parentBoundingClientRect;
     const {
       x: parentX,
@@ -2774,7 +2801,7 @@ class PopupElement {
 
     if (this.#color) {
       const baseColor = (popup.style.outlineColor = Util.makeHexColor(
-        ...this.#color
+        ...(this.#color as [number, number, number])
       ));
       popup.style.backgroundColor = `color-mix(in srgb, ${baseColor} 30%, white)`;
     }
@@ -2836,8 +2863,8 @@ class PopupElement {
     return this.#html?.attributes?.style?.color || null;
   }
 
-  #makePopupContent(text) {
-    const popupLines = [];
+  #makePopupContent(text: any) {
+    const popupLines: any[] = [];
     const popupContent = {
       str: text,
       html: {
@@ -2871,7 +2898,7 @@ class PopupElement {
     return popupContent;
   }
 
-  #keyDown(event) {
+  #keyDown(event: any) {
     if (event.altKey || event.shiftKey || event.ctrlKey || event.metaKey) {
       return;
     }
@@ -2881,7 +2908,7 @@ class PopupElement {
     }
   }
 
-  updateEdited({ rect, popup, deleted }) {
+  updateEdited({ rect, popup, deleted }: any) {
     if (this.#commentManager) {
       if (deleted) {
         this.remove();
@@ -3077,7 +3104,10 @@ class PopupElement {
 }
 
 class FreeTextAnnotationElement extends AnnotationElement {
-  constructor(parameters) {
+  declare textContent: any;
+  declare textPosition: any;
+
+  constructor(parameters: any) {
     super(parameters, { isRenderable: true, ignoreBorder: true });
     this.textContent = parameters.data.textContent;
     this.textPosition = parameters.data.textPosition;
@@ -3113,7 +3143,7 @@ class FreeTextAnnotationElement extends AnnotationElement {
 class LineAnnotationElement extends AnnotationElement {
   #line = null;
 
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, { isRenderable: true, ignoreBorder: true });
   }
 
@@ -3168,7 +3198,7 @@ class LineAnnotationElement extends AnnotationElement {
 class SquareAnnotationElement extends AnnotationElement {
   #square = null;
 
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, { isRenderable: true, ignoreBorder: true });
   }
 
@@ -3225,7 +3255,7 @@ class SquareAnnotationElement extends AnnotationElement {
 class CircleAnnotationElement extends AnnotationElement {
   #circle = null;
 
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, { isRenderable: true, ignoreBorder: true });
   }
 
@@ -3283,7 +3313,10 @@ class CircleAnnotationElement extends AnnotationElement {
 class PolylineAnnotationElement extends AnnotationElement {
   #polyline = null;
 
-  constructor(parameters) {
+  declare containerClassName: any;
+  declare svgElementName: any;
+
+  constructor(parameters: any) {
     super(parameters, { isRenderable: true, ignoreBorder: true });
 
     this.containerClassName = "polylineAnnotation";
@@ -3314,7 +3347,7 @@ class PolylineAnnotationElement extends AnnotationElement {
     // polyline element expects ("x1,y1 x2,y2 ..."). PDF coordinates are
     // calculated from a bottom left origin, so transform the polyline
     // coordinates to a top left origin for the SVG element.
-    let points = [];
+    let points: any = [];
     for (let i = 0, ii = vertices.length; i < ii; i += 2) {
       const x = vertices[i] - rect[0];
       const y = rect[3] - vertices[i + 1];
@@ -3355,7 +3388,7 @@ class PolylineAnnotationElement extends AnnotationElement {
 }
 
 class PolygonAnnotationElement extends PolylineAnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     // Polygons are specific forms of polylines, so reuse their logic.
     super(parameters);
 
@@ -3365,7 +3398,7 @@ class PolygonAnnotationElement extends PolylineAnnotationElement {
 }
 
 class CaretAnnotationElement extends AnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, { isRenderable: true, ignoreBorder: true });
   }
 
@@ -3381,11 +3414,14 @@ class CaretAnnotationElement extends AnnotationElement {
 }
 
 class InkAnnotationElement extends AnnotationElement {
-  #polylinesGroupElement = null;
+  #polylinesGroupElement: any = null;
 
-  #polylines = [];
+  #polylines: any[] = [];
 
-  constructor(parameters) {
+  declare containerClassName: any;
+  declare svgElementName: any;
+
+  constructor(parameters: any) {
     super(parameters, { isRenderable: true, ignoreBorder: true });
 
     this.containerClassName = "inkAnnotation";
@@ -3400,7 +3436,7 @@ class InkAnnotationElement extends AnnotationElement {
         : AnnotationEditorType.INK;
   }
 
-  #getTransform(rotation, rect) {
+  #getTransform(rotation: any, rect: any) {
     // PDF coordinates are calculated from a bottom left origin, so
     // transform the polyline coordinates to a top left origin for the
     // SVG element.
@@ -3478,12 +3514,12 @@ class InkAnnotationElement extends AnnotationElement {
     return this.container;
   }
 
-  updateEdited(params) {
+  updateEdited(params: any) {
     super.updateEdited(params);
     const { thickness, points, rect } = params;
     const g = this.#polylinesGroupElement;
     if (thickness >= 0) {
-      g.setAttribute("stroke-width", thickness || 1);
+      g!.setAttribute("stroke-width", thickness || 1);
     }
     if (points) {
       for (let i = 0, ii = this.#polylines.length; i < ii; i++) {
@@ -3495,9 +3531,9 @@ class InkAnnotationElement extends AnnotationElement {
         this.data.rotation,
         rect
       );
-      const root = g.parentElement;
-      root.setAttribute("viewBox", `0 0 ${width} ${height}`);
-      g.setAttribute("transform", transform);
+      const root = g!.parentElement;
+      root!.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      g!.setAttribute("transform", transform);
     }
   }
 
@@ -3511,7 +3547,7 @@ class InkAnnotationElement extends AnnotationElement {
 }
 
 class HighlightAnnotationElement extends AnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, {
       isRenderable: true,
       ignoreBorder: true,
@@ -3544,7 +3580,7 @@ class HighlightAnnotationElement extends AnnotationElement {
 }
 
 class UnderlineAnnotationElement extends AnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, {
       isRenderable: true,
       ignoreBorder: true,
@@ -3575,7 +3611,7 @@ class UnderlineAnnotationElement extends AnnotationElement {
 }
 
 class SquigglyAnnotationElement extends AnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, {
       isRenderable: true,
       ignoreBorder: true,
@@ -3606,7 +3642,7 @@ class SquigglyAnnotationElement extends AnnotationElement {
 }
 
 class StrikeOutAnnotationElement extends AnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, {
       isRenderable: true,
       ignoreBorder: true,
@@ -3637,7 +3673,7 @@ class StrikeOutAnnotationElement extends AnnotationElement {
 }
 
 class StampAnnotationElement extends AnnotationElement {
-  constructor(parameters) {
+  constructor(parameters: any) {
     super(parameters, { isRenderable: true, ignoreBorder: true });
     this.annotationEditorType = AnnotationEditorType.STAMP;
   }
@@ -3657,9 +3693,12 @@ class StampAnnotationElement extends AnnotationElement {
 }
 
 class FileAttachmentAnnotationElement extends AnnotationElement {
-  #trigger = null;
+  #trigger: any = null;
 
-  constructor(parameters) {
+  declare filename: any;
+  declare content: any;
+
+  constructor(parameters: any) {
     super(parameters, { isRenderable: true });
 
     const { file } = this.data;
@@ -3676,7 +3715,7 @@ class FileAttachmentAnnotationElement extends AnnotationElement {
     this.container.classList.add("fileAttachmentAnnotation");
 
     const { container, data } = this;
-    let trigger;
+    let trigger: any;
     if (data.hasAppearance || data.fillAlpha === 0) {
       trigger = document.createElement("div");
     } else {
@@ -3704,7 +3743,7 @@ class FileAttachmentAnnotationElement extends AnnotationElement {
     this.#trigger = trigger;
 
     const { isMac } = FeatureTest.platform;
-    container.addEventListener("keydown", evt => {
+    container.addEventListener("keydown", (evt: any) => {
       if (evt.key === "Enter" && (isMac ? evt.metaKey : evt.ctrlKey)) {
         this.#download();
       }
@@ -3764,21 +3803,29 @@ class FileAttachmentAnnotationElement extends AnnotationElement {
  * Manage the layer containing all the annotations.
  */
 class AnnotationLayer {
-  #accessibilityManager = null;
+  #accessibilityManager: any = null;
 
-  #annotationCanvasMap = null;
+  #annotationCanvasMap: any = null;
 
-  #annotationStorage = null;
+  #annotationStorage: any = null;
 
   #editableAnnotations = new Map();
 
-  #structTreeLayer = null;
+  #structTreeLayer: any = null;
 
-  #linkService = null;
+  #linkService: any = null;
 
-  #elements = [];
+  #elements: any[] = [];
 
   #hasAriaAttributesFromStructTree = false;
+
+  declare div: any;
+  declare page: any;
+  declare viewport: any;
+  declare zIndex: any;
+  declare _annotationEditorUIManager: any;
+  declare _commentManager: any;
+  declare popupShow: any;
 
   constructor({
     div,
@@ -3791,7 +3838,7 @@ class AnnotationLayer {
     commentManager,
     linkService,
     annotationStorage,
-  }) {
+  }: any) {
     this.div = div;
     this.#accessibilityManager = accessibilityManager;
     this.#annotationCanvasMap = annotationCanvasMap;
@@ -3827,7 +3874,7 @@ class AnnotationLayer {
    * @param {AnnotationLayerParameters} params
    * @memberof AnnotationLayer
    */
-  async render(params) {
+  async render(params: any) {
     const { annotations } = params;
     const layer = this.div;
     setLayerDimensions(layer, this.viewport);
@@ -3939,7 +3986,7 @@ class AnnotationLayer {
         promises.push(
           this.#structTreeLayer
             ?.getAriaAttributes(annotationId)
-            .then(ariaAttributes => {
+            .then((ariaAttributes: any) => {
               if (ariaAttributes) {
                 for (const [key, value] of ariaAttributes) {
                   contentElement.setAttribute(key, value);
@@ -4023,7 +4070,7 @@ class AnnotationLayer {
    *
    * @param {Array<Object>} annotations
    */
-  async addLinkAnnotations(annotations) {
+  async addLinkAnnotations(annotations: any) {
     const elementParams = {
       data: null,
       layer: this.div,
@@ -4053,7 +4100,7 @@ class AnnotationLayer {
    * @param {AnnotationLayerParameters} viewport
    * @memberof AnnotationLayer
    */
-  update({ viewport }) {
+  update({ viewport }: any) {
     const layer = this.div;
     this.viewport = viewport;
     setLayerDimensions(layer, { rotation: viewport.rotation });
@@ -4108,11 +4155,11 @@ class AnnotationLayer {
     return this.#editableAnnotations.values();
   }
 
-  getEditableAnnotation(id) {
+  getEditableAnnotation(id: any) {
     return this.#editableAnnotations.get(id);
   }
 
-  addFakeAnnotation(editor) {
+  addFakeAnnotation(editor: any) {
     const { div } = this;
     const { id, rotation } = editor;
     const element = new EditorAnnotationElement({
@@ -4135,7 +4182,7 @@ class AnnotationLayer {
     return element;
   }
 
-  removeAnnotation(id) {
+  removeAnnotation(id: any) {
     const index = this.#elements.findIndex(el => el.data.id === id);
     if (index < 0) {
       return;
@@ -4146,7 +4193,7 @@ class AnnotationLayer {
     );
   }
 
-  updateFakeAnnotations(editors) {
+  updateFakeAnnotations(editors: any) {
     if (editors.length === 0) {
       return;
     }

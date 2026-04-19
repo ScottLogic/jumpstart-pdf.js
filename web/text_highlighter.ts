@@ -13,30 +13,29 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
-/** @typedef {import("./event_utils").EventBus} EventBus */
-
-/** @typedef {import("./pdf_find_controller").PDFFindController} PDFFindController */
-
-/**
- * @typedef {Object} TextHighlighterOptions
- * @property {PDFFindController} findController
- * @property {EventBus} eventBus - The application event bus.
- * @property {number} pageIndex - The page index.
- */
+type MatchPosition = { divIdx: number; offset: number };
+type HighlightMatch = { begin: MatchPosition; end: MatchPosition };
 
 /**
  * TextHighlighter handles highlighting matches from the FindController in
  * either the text layer or XFA layer depending on the type of document.
  */
 class TextHighlighter {
-  #eventAbortController = null;
+  #eventAbortController: AbortController | null = null;
 
-  /**
-   * @param {TextHighlighterOptions} options
-   */
-  constructor({ findController, eventBus, pageIndex }) {
+  findController: any;
+  matches: HighlightMatch[];
+  eventBus: any;
+  pageIdx: number;
+  textDivs: any[] | null;
+  textContentItemsStr: string[] | null;
+  enabled: boolean;
+
+  constructor({ findController, eventBus, pageIndex }: {
+    findController: any;
+    eventBus: any;
+    pageIndex: number;
+  }) {
     this.findController = findController;
     this.matches = [];
     this.eventBus = eventBus;
@@ -55,7 +54,7 @@ class TextHighlighter {
    * @param {Array<Node>} divs
    * @param {Array<string>} texts
    */
-  setTextMapping(divs, texts) {
+  setTextMapping(divs: any[], texts: string[]): void {
     this.textDivs = divs;
     this.textContentItemsStr = texts;
   }
@@ -64,7 +63,7 @@ class TextHighlighter {
    * Start listening for events to update the highlighter and check if there are
    * any current matches that need be highlighted.
    */
-  enable() {
+  enable(): void {
     if (!this.textDivs || !this.textContentItemsStr) {
       throw new Error("Text divs and strings have not been set.");
     }
@@ -78,8 +77,9 @@ class TextHighlighter {
 
       this.eventBus._on(
         "updatetextlayermatches",
-        evt => {
-          if (evt.pageIndex === this.pageIdx || evt.pageIndex === -1) {
+        (evt: unknown) => {
+          const e = evt as { pageIndex: number };
+          if (e.pageIndex === this.pageIdx || e.pageIndex === -1) {
             this._updateMatches();
           }
         },
@@ -89,7 +89,7 @@ class TextHighlighter {
     this._updateMatches();
   }
 
-  disable() {
+  disable(): void {
     if (!this.enabled) {
       return;
     }
@@ -101,7 +101,7 @@ class TextHighlighter {
     this._updateMatches(/* reset = */ true);
   }
 
-  _convertMatches(matches, matchesLength) {
+  _convertMatches(matches: number[] | null, matchesLength: number[]): HighlightMatch[] {
     // Early exit if there is nothing to convert.
     if (!matches) {
       return [];
@@ -110,28 +110,29 @@ class TextHighlighter {
 
     let i = 0,
       iIndex = 0;
-    const end = textContentItemsStr.length - 1;
-    const result = [];
+    const end = textContentItemsStr!.length - 1;
+    const result: HighlightMatch[] = [];
 
     for (let m = 0, mm = matches.length; m < mm; m++) {
       // Calculate the start position.
       let matchIdx = matches[m];
 
       // Loop over the divIdxs.
-      while (i !== end && matchIdx >= iIndex + textContentItemsStr[i].length) {
-        iIndex += textContentItemsStr[i].length;
+      while (i !== end && matchIdx >= iIndex + textContentItemsStr![i].length) {
+        iIndex += textContentItemsStr![i].length;
         i++;
       }
 
-      if (i === textContentItemsStr.length) {
+      if (i === textContentItemsStr!.length) {
         console.error("Could not find a matching mapping");
       }
 
-      const match = {
+      const match: HighlightMatch = {
         begin: {
           divIdx: i,
           offset: matchIdx - iIndex,
         },
+        end: { divIdx: 0, offset: 0 },
       };
 
       // Calculate the end position.
@@ -139,8 +140,8 @@ class TextHighlighter {
 
       // Somewhat the same array as above, but use > instead of >= to get
       // the end position right.
-      while (i !== end && matchIdx > iIndex + textContentItemsStr[i].length) {
-        iIndex += textContentItemsStr[i].length;
+      while (i !== end && matchIdx > iIndex + textContentItemsStr![i].length) {
+        iIndex += textContentItemsStr![i].length;
         i++;
       }
 
@@ -153,7 +154,7 @@ class TextHighlighter {
     return result;
   }
 
-  _renderMatches(matches) {
+  _renderMatches(matches: HighlightMatch[]): void {
     // Early exit if there is nothing to render.
     if (matches.length === 0) {
       return;
@@ -164,28 +165,28 @@ class TextHighlighter {
     const isSelectedPage = pageIdx === findController.selected.pageIdx;
     const selectedMatchIdx = findController.selected.matchIdx;
     const highlightAll = findController.state.highlightAll;
-    let prevEnd = null;
-    const infinity = {
+    let prevEnd: MatchPosition | null = null;
+    const infinity: MatchPosition = {
       divIdx: -1,
-      offset: undefined,
+      offset: undefined as unknown as number,
     };
 
-    function beginText(begin, className) {
+    function beginText(begin: MatchPosition, className?: string): HTMLSpanElement | null | 0 {
       const divIdx = begin.divIdx;
-      textDivs[divIdx].textContent = "";
+      textDivs![divIdx].textContent = "";
       return appendTextToDiv(divIdx, 0, begin.offset, className);
     }
 
-    function appendTextToDiv(divIdx, fromOffset, toOffset, className) {
-      let div = textDivs[divIdx];
+    function appendTextToDiv(divIdx: number, fromOffset: number, toOffset: number | undefined, className?: string): HTMLSpanElement | null | 0 {
+      let div = textDivs![divIdx];
       if (div.nodeType === Node.TEXT_NODE) {
         const span = document.createElement("span");
         div.before(span);
         span.append(div);
-        textDivs[divIdx] = span;
+        textDivs![divIdx] = span;
         div = span;
       }
-      const content = textContentItemsStr[divIdx].substring(
+      const content = textContentItemsStr![divIdx].substring(
         fromOffset,
         toOffset
       );
@@ -233,7 +234,7 @@ class TextHighlighter {
       const end = match.end;
       const isSelected = isSelectedPage && i === selectedMatchIdx;
       const highlightSuffix = isSelected ? " selected" : "";
-      let selectedSpan = null;
+      let selectedSpan: HTMLSpanElement | null | 0 = null;
 
       // Match inside new div.
       if (!prevEnd || begin.divIdx !== prevEnd.divIdx) {
@@ -262,7 +263,7 @@ class TextHighlighter {
           "highlight begin" + highlightSuffix
         );
         for (let n0 = begin.divIdx + 1, n1 = end.divIdx; n0 < n1; n0++) {
-          textDivs[n0].className = "highlight middle" + highlightSuffix;
+          textDivs![n0].className = "highlight middle" + highlightSuffix;
         }
         beginText(end, "highlight end" + highlightSuffix);
       }
@@ -283,7 +284,7 @@ class TextHighlighter {
     }
   }
 
-  _updateMatches(reset = false) {
+  _updateMatches(reset = false): void {
     if (!this.enabled && !reset) {
       return;
     }
@@ -295,8 +296,8 @@ class TextHighlighter {
     for (const match of matches) {
       const begin = Math.max(clearedUntilDivIdx, match.begin.divIdx);
       for (let n = begin, end = match.end.divIdx; n <= end; n++) {
-        const div = textDivs[n];
-        div.textContent = textContentItemsStr[n];
+        const div = textDivs![n];
+        div.textContent = textContentItemsStr![n];
         div.className = "";
       }
       clearedUntilDivIdx = match.end.divIdx + 1;

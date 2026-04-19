@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 /**
  * @module pdfjsLib
  */
@@ -241,7 +239,7 @@ const RENDERING_CANCELLED_TIMEOUT = 100; // ms
  *         already populated with data, or a parameter object.
  * @returns {PDFDocumentLoadingTask}
  */
-function getDocument(src = {}) {
+function getDocument(src: any = {}) {
   if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
     if (typeof src === "string" || src instanceof URL) {
       src = { url: src };
@@ -293,7 +291,7 @@ function getDocument(src = {}) {
         ? true
         : typeof PDFJSDev !== "undefined" && PDFJSDev.test("CHROME")
           ? false
-          : !isNodeJS && (FeatureTest.platform.isFirefox || !globalThis.chrome);
+          : !isNodeJS && (FeatureTest.platform.isFirefox || !(globalThis as any).chrome);
   const canvasMaxAreaInBytes = Number.isInteger(src.canvasMaxAreaInBytes)
     ? src.canvasMaxAreaInBytes
     : -1;
@@ -439,7 +437,7 @@ function getDocument(src = {}) {
         data ? [data.buffer] : null
       );
 
-      let networkStream;
+      let networkStream: any;
       if (data) {
         // The entire PDF was provided, no `networkStream` necessary.
       } else if (rangeTransport) {
@@ -468,7 +466,7 @@ function getDocument(src = {}) {
         );
       }
 
-      return workerIdPromise.then(workerId => {
+      return workerIdPromise.then((workerId: any) => {
         if (task.destroyed) {
           throw new Error("Loading aborted");
         }
@@ -523,12 +521,12 @@ class PDFDocumentLoadingTask {
   /**
    * @private
    */
-  _transport = null;
+  _transport: WorkerTransport | null = null;
 
   /**
    * @private
    */
-  _worker = null;
+  _worker: PDFWorker | null = null;
 
   /**
    * Unique identifier for the document loading task.
@@ -598,7 +596,7 @@ class PDFDocumentLoadingTask {
    * @returns {Promise<Uint8Array>}
    */
   async getData() {
-    return this._transport.getData();
+    return this._transport!.getData();
   }
 }
 
@@ -610,9 +608,17 @@ class PDFDocumentLoadingTask {
  * main-thread memory usage, however it will take ownership of the TypedArrays.
  */
 class PDFDataRangeTransport {
-  #capability = Promise.withResolvers();
+  #capability = Promise.withResolvers<void>();
 
-  #listener = null;
+  #listener: ((data: any) => void) | null = null;
+
+  declare length: number;
+
+  declare initialData: Uint8Array | null;
+
+  declare progressiveDone: boolean;
+
+  declare contentDispositionFilename: string | null;
 
   /**
    * @param {number} length
@@ -621,10 +627,10 @@ class PDFDataRangeTransport {
    * @param {string} [contentDispositionFilename]
    */
   constructor(
-    length,
-    initialData,
+    length: number,
+    initialData: Uint8Array | null,
     progressiveDone = false,
-    contentDispositionFilename = null
+    contentDispositionFilename: string | null = null
   ) {
     this.length = length;
     this.initialData = initialData;
@@ -648,26 +654,26 @@ class PDFDataRangeTransport {
    * @param {number} begin
    * @param {Uint8Array|null} chunk
    */
-  onDataRange(begin, chunk) {
-    this.#listener({ type: "range", begin, chunk });
+  onDataRange(begin: number, chunk: any) {
+    this.#listener!({ type: "range", begin, chunk });
   }
 
   /**
    * @param {Uint8Array|null} chunk
    */
-  onDataProgressiveRead(chunk) {
+  onDataProgressiveRead(chunk: any) {
     this.#capability.promise.then(() => {
-      this.#listener({ type: "progressiveRead", chunk });
+      this.#listener!({ type: "progressiveRead", chunk });
     });
   }
 
   onDataProgressiveDone() {
     this.#capability.promise.then(() => {
-      this.#listener({ type: "progressiveDone" });
+      this.#listener!({ type: "progressiveDone" });
     });
   }
 
-  transportReady(listener) {
+  transportReady(listener: (data: any) => void) {
     this.#listener = listener;
     this.#capability.resolve();
   }
@@ -676,7 +682,7 @@ class PDFDataRangeTransport {
    * @param {number} begin
    * @param {number} end
    */
-  requestDataRange(begin, end) {
+  requestDataRange(begin: number, end: number) {
     unreachable("Abstract method PDFDataRangeTransport.requestDataRange");
   }
 
@@ -687,23 +693,27 @@ class PDFDataRangeTransport {
  * Proxy to a `PDFDocument` in the worker thread.
  */
 class PDFDocumentProxy {
-  constructor(pdfInfo, transport) {
+  declare _pdfInfo: any;
+
+  declare _transport: WorkerTransport;
+
+  constructor(pdfInfo: any, transport: WorkerTransport) {
     this._pdfInfo = pdfInfo;
     this._transport = transport;
 
     if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
       // For testing purposes.
       Object.defineProperty(this, "getNetworkStreamName", {
-        value: () => this._transport.getNetworkStreamName(),
+        value: () => this._transport.getNetworkStreamName!(),
       });
       Object.defineProperty(this, "getXFADatasets", {
-        value: () => this._transport.getXFADatasets(),
+        value: () => this._transport.getXFADatasets!(),
       });
       Object.defineProperty(this, "getStartXRefPos", {
-        value: () => this._transport.getStartXRefPos(),
+        value: () => this._transport.getStartXRefPos!(),
       });
       Object.defineProperty(this, "getAnnotArray", {
-        value: pageIndex => this._transport.getAnnotArray(pageIndex),
+        value: (pageIndex: any) => this._transport.getAnnotArray!(pageIndex),
       });
     }
   }
@@ -775,7 +785,7 @@ class PDFDocumentProxy {
    * @returns {Promise<PDFPageProxy>} A promise that is resolved with
    *   a {@link PDFPageProxy} object.
    */
-  getPage(pageNumber) {
+  getPage(pageNumber: any) {
     return this._transport.getPage(pageNumber);
   }
 
@@ -784,7 +794,7 @@ class PDFDocumentProxy {
    * @returns {Promise<number>} A promise that is resolved with the page index,
    *   starting from zero, that is associated with the reference.
    */
-  getPageIndex(ref) {
+  getPageIndex(ref: any) {
     return this._transport.getPageIndex(ref);
   }
 
@@ -804,7 +814,7 @@ class PDFDocumentProxy {
    *   information of the given named destination, or `null` when the named
    *   destination is not present in the PDF file.
    */
-  getDestination(id) {
+  getDestination(id: any) {
     return this._transport.getDestination(id);
   }
 
@@ -865,7 +875,7 @@ class PDFDocumentProxy {
    * @returns {Promise<Array<Object>>} A promise that is resolved with a list of
    *   annotations data.
    */
-  getAnnotationsByType(types, pageIndexesToSkip) {
+  getAnnotationsByType(types: any, pageIndexesToSkip: any) {
     return this._transport.getAnnotationsByType(types, pageIndexesToSkip);
   }
 
@@ -993,7 +1003,7 @@ class PDFDocumentProxy {
    * @returns {Promise<Uint8Array>} A promise that is resolved with a
    *   {Uint8Array} containing the full data of the saved document.
    */
-  extractPages(pageInfos) {
+  extractPages(pageInfos: any) {
     return this._transport.extractPages(pageInfos);
   }
 
@@ -1006,7 +1016,7 @@ class PDFDocumentProxy {
     return this._transport.downloadInfoCapability.promise;
   }
 
-  getRawData(data) {
+  getRawData(data: any) {
     return this._transport.getRawData(data);
   }
 
@@ -1037,7 +1047,7 @@ class PDFDocumentProxy {
    * @param {RefProxy} ref - The page reference.
    * @returns {number | null} The page number, if it's cached.
    */
-  cachedPageNumber(ref) {
+  cachedPageNumber(ref: any) {
     return this._transport.cachedPageNumber(ref);
   }
 
@@ -1283,9 +1293,33 @@ class PDFDocumentProxy {
 class PDFPageProxy {
   #pendingCleanup = false;
 
-  #pagesMapper = null;
+  #pagesMapper: PagesMapper | null = null;
 
-  constructor(pageIndex, pageInfo, transport, pagesMapper, pdfBug = false) {
+  declare _pageIndex: number;
+
+  declare _pageInfo: any;
+
+  declare _transport: WorkerTransport;
+
+  declare _stats: StatTimer | null;
+
+  declare _pdfBug: boolean;
+
+  declare commonObjs: PDFObjects;
+
+  declare objs: PDFObjects;
+
+  declare _intentStates: Map<any, any>;
+
+  declare destroyed: boolean;
+
+  declare recordedBBoxes: any;
+
+  declare imageCoordinates: any;
+
+  declare clonedFromIndex: number | undefined;
+
+  constructor(pageIndex: number, pageInfo: any, transport: WorkerTransport, pagesMapper: PagesMapper, pdfBug = false) {
     this._pageIndex = pageIndex;
     this._pageInfo = pageInfo;
     this._transport = transport;
@@ -1302,12 +1336,12 @@ class PDFPageProxy {
     this.imageCoordinates = null;
   }
 
-  clone(id) {
+  clone(id: number) {
     const clone = new PDFPageProxy(
       id,
       this._pageInfo,
       this._transport,
-      this.#pagesMapper,
+      this.#pagesMapper!,
       this._pdfBug
     );
     clone.clonedFromIndex = this.clonedFromIndex ?? this._pageIndex;
@@ -1442,7 +1476,7 @@ class PDFPageProxy {
    */
   render({
     canvasContext,
-    canvas = canvasContext.canvas,
+    canvas = (canvasContext as any).canvas,
     viewport,
     intent = "display",
     annotationMode = AnnotationMode.ENABLE,
@@ -1456,7 +1490,7 @@ class PDFPageProxy {
     recordImages = false,
     recordOperations = false,
     operationsFilter = null,
-  }) {
+  }: any) {
     this._stats?.time("Overall");
 
     const intentArgs = this._transport.getRenderingIntent(
@@ -1501,7 +1535,7 @@ class PDFPageProxy {
     }
 
     const recordForDebugger = !!(
-      this._pdfBug && globalThis.StepperManager?.enabled
+      this._pdfBug && (globalThis as any).StepperManager?.enabled
     );
     const shouldRecordOperations =
       !!canvas &&
@@ -1510,7 +1544,7 @@ class PDFPageProxy {
     const shouldRecordImages =
       !!canvas && !this.imageCoordinates && recordImages;
 
-    const complete = error => {
+    const complete = (error?: any) => {
       intentState.renderTasks.delete(internalRenderTask);
 
       if (shouldRecordOperations) {
@@ -1553,8 +1587,8 @@ class PDFPageProxy {
         this._stats.timeEnd("Rendering");
         this._stats.timeEnd("Overall");
 
-        if (globalThis.Stats?.enabled) {
-          globalThis.Stats.add(this.pageNumber, this._stats);
+        if ((globalThis as any).Stats?.enabled) {
+          (globalThis as any).Stats.add(this.pageNumber, this._stats);
         }
       }
     };
@@ -1569,7 +1603,7 @@ class PDFPageProxy {
     }
     if (shouldRecordOperations) {
       dependencyTracker = new CanvasDependencyTracker(
-        bboxTracker,
+        bboxTracker!,
         recordForDebugger
       );
     }
@@ -1667,7 +1701,7 @@ class PDFPageProxy {
       intentArgs.cacheKey,
       makeObj
     );
-    let opListTask;
+    let opListTask: any;
 
     if (!intentState.opListReadCapability) {
       opListTask = Object.create(null);
@@ -1703,14 +1737,14 @@ class PDFPageProxy {
     return this._transport.messageHandler.sendWithStream(
       "GetTextContent",
       {
-        pageId: this.#pagesMapper.getPageId(this._pageIndex + 1) - 1,
+        pageId: this.#pagesMapper!.getPageId(this._pageIndex + 1) - 1,
         pageIndex: this._pageIndex,
         includeMarkedContent: includeMarkedContent === true,
         disableNormalization: disableNormalization === true,
       },
       {
         highWaterMark: TEXT_CONTENT_CHUNK_SIZE,
-        size(textContent) {
+        size(textContent: any) {
           return textContent.items.length;
         },
       }
@@ -1733,7 +1767,7 @@ class PDFPageProxy {
     }
     const readableStream = this.streamTextContent(params);
 
-    const textContent = {
+    const textContent: { items: any[]; styles: any; lang: any } = {
       items: [],
       styles: Object.create(null),
       lang: null,
@@ -1825,7 +1859,7 @@ class PDFPageProxy {
   /**
    * @private
    */
-  _startRenderPage(transparency, cacheKey) {
+  _startRenderPage(transparency: any, cacheKey: any) {
     const intentState = this._intentStates.get(cacheKey);
     if (!intentState) {
       return; // Rendering was cancelled.
@@ -1840,7 +1874,7 @@ class PDFPageProxy {
   /**
    * @private
    */
-  _renderPageChunk(operatorListChunk, intentState) {
+  _renderPageChunk(operatorListChunk: any, intentState: any) {
     // Add the new chunk to the current operator list.
     for (let i = 0, ii = operatorListChunk.length; i < ii; i++) {
       intentState.operatorList.fnArray.push(operatorListChunk.fnArray[i]);
@@ -1867,7 +1901,7 @@ class PDFPageProxy {
     cacheKey,
     annotationStorageSerializable,
     modifiedIds,
-  }) {
+  }: any) {
     if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
       assert(
         Number.isInteger(renderingIntent) && renderingIntent > 0,
@@ -1879,7 +1913,7 @@ class PDFPageProxy {
     const readableStream = this._transport.messageHandler.sendWithStream(
       "GetOperatorList",
       {
-        pageId: this.#pagesMapper.getPageId(this._pageIndex + 1) - 1,
+        pageId: this.#pagesMapper!.getPageId(this._pageIndex + 1) - 1,
         pageIndex: this._pageIndex,
         intent: renderingIntent,
         cacheKey,
@@ -1896,7 +1930,7 @@ class PDFPageProxy {
 
     const pump = () => {
       reader.read().then(
-        ({ value, done }) => {
+        ({ value, done }: any) => {
           if (done) {
             intentState.streamReader = null;
             return;
@@ -1907,7 +1941,7 @@ class PDFPageProxy {
           this._renderPageChunk(value, intentState);
           pump();
         },
-        reason => {
+        (reason: any) => {
           intentState.streamReader = null;
 
           if (this._transport.destroyed) {
@@ -1939,7 +1973,7 @@ class PDFPageProxy {
   /**
    * @private
    */
-  _abortOperatorList({ intentState, reason, force = false }) {
+  _abortOperatorList({ intentState, reason, force = false }: any) {
     if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
       assert(
         reason instanceof Error,
@@ -2027,13 +2061,27 @@ class PDFPageProxy {
  * @param {PDFWorkerParameters} params - The worker initialization parameters.
  */
 class PDFWorker {
-  #capability = Promise.withResolvers();
+  #capability = Promise.withResolvers<void>();
 
-  #messageHandler = null;
+  #messageHandler: MessageHandler | null = null;
 
-  #port = null;
+  #port: Worker | LoopbackPort | null = null;
 
-  #webWorker = null;
+  #webWorker: Worker | null = null;
+
+  declare name: string | null;
+
+  declare destroyed: boolean;
+
+  declare verbosity: number;
+
+  declare _pendingDestroy: boolean | undefined;
+
+  static declare _isSameOrigin: ((baseUrl: string | URL | undefined, otherUrl: string) => boolean) | undefined;
+
+  static declare _createCDNWrapper: ((url: string) => string) | undefined;
+
+  static declare _resetGlobalState: (() => void) | undefined;
 
   static #fakeWorkerId = 0;
 
@@ -2047,15 +2095,15 @@ class PDFWorker {
         // Workers aren't supported in Node.js, force-disabling them there.
         this.#isWorkerDisabled = true;
 
-        GlobalWorkerOptions.workerSrc ||= PDFJSDev.test("LIB")
+        GlobalWorkerOptions.workerSrc ||= PDFJSDev!.test("LIB")
           ? "../pdf.worker.js"
           : "./pdf.worker.mjs";
       }
 
       // Check if URLs have the same origin. For non-HTTP based URLs, returns
       // false.
-      this._isSameOrigin = (baseUrl, otherUrl) => {
-        const base = URL.parse(baseUrl);
+      this._isSameOrigin = (baseUrl: string | URL | undefined, otherUrl: string) => {
+        const base = URL.parse(baseUrl as string | URL);
         if (!base?.origin || base.origin === "null") {
           return false; // non-HTTP url
         }
@@ -2063,7 +2111,7 @@ class PDFWorker {
         return base.origin === other.origin;
       };
 
-      this._createCDNWrapper = url => {
+      this._createCDNWrapper = (url: string) => {
         // We will rely on blob URL's property to specify origin.
         // We want this function to fail in case if createObjectURL or Blob do
         // not exist or fail for some reason -- our Worker creation will fail
@@ -2078,7 +2126,7 @@ class PDFWorker {
     if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
       this._resetGlobalState = () => {
         this.#isWorkerDisabled = false;
-        delete globalThis.pdfjsWorker;
+        delete (globalThis as any).pdfjsWorker;
       };
     }
   }
@@ -2123,7 +2171,7 @@ class PDFWorker {
   #resolve() {
     this.#capability.resolve();
     // Send global setting, e.g. verbosity level.
-    this.#messageHandler.send("configure", {
+    this.#messageHandler!.send("configure", {
       verbosity: this.verbosity,
     });
   }
@@ -2144,10 +2192,10 @@ class PDFWorker {
     return this.#messageHandler;
   }
 
-  #initializeFromPort(port) {
+  #initializeFromPort(port: Worker) {
     this.#port = port;
     this.#messageHandler = new MessageHandler("main", "worker", port);
-    this.#messageHandler.on("ready", () => {
+    this.#messageHandler!.on("ready", () => {
       // Ignoring "ready" event -- MessageHandler should already be initialized
       // and ready to accept messages.
     });
@@ -2175,11 +2223,11 @@ class PDFWorker {
       if (
         typeof PDFJSDev !== "undefined" &&
         PDFJSDev.test("GENERIC") &&
-        !PDFWorker._isSameOrigin(window.location, workerSrc)
+        !PDFWorker._isSameOrigin?.(window.location.href, workerSrc)
       ) {
-        workerSrc = PDFWorker._createCDNWrapper(
-          new URL(workerSrc, window.location).href
-        );
+        workerSrc = PDFWorker._createCDNWrapper?.(
+          new URL(workerSrc, window.location.href).href
+        ) ?? workerSrc;
       }
 
       const worker = new Worker(workerSrc, { type: "module" });
@@ -2299,7 +2347,9 @@ class PDFWorker {
     this.#webWorker?.terminate();
     this.#webWorker = null;
 
-    PDFWorker.#workerPorts.delete(this.#port);
+    if (this.#port) {
+      PDFWorker.#workerPorts.delete(this.#port);
+    }
     this.#port = null;
 
     this.#messageHandler?.destroy();
@@ -2310,7 +2360,7 @@ class PDFWorker {
    * @param {PDFWorkerParameters} params - The worker initialization parameters.
    * @returns {PDFWorker}
    */
-  static create(params) {
+  static create(params: any) {
     const cachedPort = this.#workerPorts.get(params?.port);
     if (cachedPort) {
       if (cachedPort._pendingDestroy) {
@@ -2337,7 +2387,7 @@ class PDFWorker {
 
   static get #mainThreadWorkerMessageHandler() {
     try {
-      return globalThis.pdfjsWorker?.WorkerMessageHandler || null;
+      return (globalThis as any).pdfjsWorker?.WorkerMessageHandler || null;
     } catch {
       return null;
     }
@@ -2352,6 +2402,7 @@ class PDFWorker {
       }
       const worker =
         typeof PDFJSDev === "undefined"
+          // @ts-ignore
           ? await import("pdfjs/pdf.worker.js")
           : await __raw_import__(this.workerSrc);
       return worker.WorkerMessageHandler;
@@ -2368,11 +2419,11 @@ class PDFWorker {
 class WorkerTransport {
   downloadInfoCapability = Promise.withResolvers();
 
-  #fullReader = null;
+  #fullReader: any = null;
 
   #methodPromises = new Map();
 
-  #networkStream = null;
+  #networkStream: any = null;
 
   #pageCache = new Map();
 
@@ -2380,15 +2431,55 @@ class WorkerTransport {
 
   #pageRefCache = new Map();
 
-  #passwordCapability = null;
+  #passwordCapability: any = null;
+
+  declare messageHandler: any;
+
+  declare loadingTask: any;
+
+  declare commonObjs: PDFObjects;
+
+  declare fontLoader: FontLoader;
+
+  declare enableHWA: boolean;
+
+  declare loadingParams: any;
+
+  declare _params: any;
+
+  declare canvasFactory: any;
+
+  declare filterFactory: any;
+
+  declare binaryDataFactory: any;
+
+  declare pagesMapper: PagesMapper;
+
+  declare destroyed: boolean;
+
+  declare destroyCapability: any;
+
+  declare _numPages: number;
+
+  declare _htmlForXfa: any;
+
+  declare getNetworkStreamName: (() => string | null) | undefined;
+
+  declare getXFADatasets: (() => Promise<any>) | undefined;
+
+  declare getXRefPrevValue: (() => Promise<any>) | undefined;
+
+  declare getStartXRefPos: (() => Promise<any>) | undefined;
+
+  declare getAnnotArray: ((pageIndex: any) => Promise<any>) | undefined;
 
   constructor(
-    messageHandler,
-    loadingTask,
-    networkStream,
-    params,
-    factory,
-    pagesMapper
+    messageHandler: any,
+    loadingTask: any,
+    networkStream: any,
+    params: any,
+    factory: any,
+    pagesMapper: any
   ) {
     this.messageHandler = messageHandler;
     this.loadingTask = loadingTask;
@@ -2433,25 +2524,25 @@ class WorkerTransport {
           this.messageHandler.sendWithPromise("GetStartXRefPos", null),
       });
       Object.defineProperty(this, "getAnnotArray", {
-        value: pageIndex =>
+        value: (pageIndex: any) =>
           this.messageHandler.sendWithPromise("GetAnnotArray", { pageIndex }),
       });
     }
   }
 
-  updatePage(page) {
+  updatePage(page: any) {
     const { _pageIndex } = page;
     this.#pageCache.set(_pageIndex, page);
     this.#pagePromises.set(_pageIndex, Promise.resolve(page));
   }
 
-  #cacheSimpleMethod(name, data = null) {
+  #cacheSimpleMethod(name: any, data = null) {
     return this.#methodPromises.getOrInsertComputed(name, () =>
       this.messageHandler.sendWithPromise(name, data)
     );
   }
 
-  #onProgress({ loaded, total }) {
+  #onProgress({ loaded, total }: any) {
     this.loadingTask.onProgress?.({
       loaded,
       total,
@@ -2466,14 +2557,14 @@ class WorkerTransport {
   }
 
   getRenderingIntent(
-    intent,
-    annotationMode = AnnotationMode.ENABLE,
-    printAnnotationStorage = null,
+    intent: any,
+    annotationMode: number = AnnotationMode.ENABLE,
+    printAnnotationStorage: PrintAnnotationStorage | null = null,
     isEditing = false,
     isOpList = false
   ) {
-    let renderingIntent = RenderingIntentFlag.DISPLAY; // Default value.
-    let annotationStorageSerializable = SerializableEmpty;
+    let renderingIntent: number = RenderingIntentFlag.DISPLAY; // Default value.
+    let annotationStorageSerializable: any = SerializableEmpty;
 
     switch (intent) {
       case "any":
@@ -2587,7 +2678,7 @@ class WorkerTransport {
   setupMessageHandler() {
     const { messageHandler, loadingTask } = this;
 
-    messageHandler.on("GetReader", (data, sink) => {
+    messageHandler.on("GetReader", (data: any, sink: any) => {
       assert(
         this.#networkStream,
         "GetReader - no `BasePDFStream` instance available."
@@ -2595,12 +2686,12 @@ class WorkerTransport {
       this.#fullReader = this.#networkStream.getFullReader();
       // If stream or range turn out to be disabled, once `headersReady` is
       // resolved, this is our only way to report loading progress.
-      this.#fullReader.onProgress = evt => this.#onProgress(evt);
+      this.#fullReader.onProgress = (evt: any) => this.#onProgress(evt);
 
       sink.onPull = () => {
         this.#fullReader
           .read()
-          .then(function ({ value, done }) {
+          .then(function ({ value, done }: any) {
             if (done) {
               sink.close();
               return;
@@ -2613,15 +2704,15 @@ class WorkerTransport {
             // to other side as `Transferable` object.
             sink.enqueue(new Uint8Array(value), 1, [value]);
           })
-          .catch(reason => {
+          .catch((reason: any) => {
             sink.error(reason);
           });
       };
 
-      sink.onCancel = reason => {
+      sink.onCancel = (reason: any) => {
         this.#fullReader.cancel(reason);
 
-        sink.ready.catch(readyReason => {
+        sink.ready.catch((readyReason: any) => {
           if (this.destroyed) {
             return; // Ignore any pending requests if the worker was terminated.
           }
@@ -2630,7 +2721,7 @@ class WorkerTransport {
       };
     });
 
-    messageHandler.on("ReaderHeadersReady", async data => {
+    messageHandler.on("ReaderHeadersReady", async (data: any) => {
       await this.#fullReader.headersReady;
 
       const { isStreamingSupported, isRangeSupported, contentLength } =
@@ -2642,7 +2733,7 @@ class WorkerTransport {
       return { isStreamingSupported, isRangeSupported, contentLength };
     });
 
-    messageHandler.on("GetRangeReader", (data, sink) => {
+    messageHandler.on("GetRangeReader", (data: any, sink: any) => {
       assert(
         this.#networkStream,
         "GetRangeReader - no `BasePDFStream` instance available."
@@ -2670,7 +2761,7 @@ class WorkerTransport {
       sink.onPull = () => {
         rangeReader
           .read()
-          .then(function ({ value, done }) {
+          .then(function ({ value, done }: any) {
             if (done) {
               sink.close();
               return;
@@ -2681,15 +2772,15 @@ class WorkerTransport {
             );
             sink.enqueue(new Uint8Array(value), 1, [value]);
           })
-          .catch(reason => {
+          .catch((reason: any) => {
             sink.error(reason);
           });
       };
 
-      sink.onCancel = reason => {
+      sink.onCancel = (reason: any) => {
         rangeReader.cancel(reason);
 
-        sink.ready.catch(readyReason => {
+        sink.ready.catch((readyReason: any) => {
           if (this.destroyed) {
             return; // Ignore any pending requests if the worker was terminated.
           }
@@ -2698,7 +2789,7 @@ class WorkerTransport {
       };
     });
 
-    messageHandler.on("GetDoc", ({ pdfInfo }) => {
+    messageHandler.on("GetDoc", ({ pdfInfo }: any) => {
       this.pagesMapper.pagesNumber = pdfInfo.numPages;
       this._numPages = pdfInfo.numPages;
       this._htmlForXfa = pdfInfo.htmlForXfa;
@@ -2706,11 +2797,11 @@ class WorkerTransport {
       loadingTask._capability.resolve(new PDFDocumentProxy(pdfInfo, this));
     });
 
-    messageHandler.on("DocException", ex => {
+    messageHandler.on("DocException", (ex: any) => {
       loadingTask._capability.reject(wrapReason(ex));
     });
 
-    messageHandler.on("PasswordRequest", ex => {
+    messageHandler.on("PasswordRequest", (ex: any) => {
       this.#passwordCapability = Promise.withResolvers();
 
       try {
@@ -2718,7 +2809,7 @@ class WorkerTransport {
           throw wrapReason(ex);
         }
 
-        const updatePassword = password => {
+        const updatePassword = (password: any) => {
           if (password instanceof Error) {
             this.#passwordCapability.reject(password);
           } else {
@@ -2732,7 +2823,7 @@ class WorkerTransport {
       return this.#passwordCapability.promise;
     });
 
-    messageHandler.on("DataLoaded", data => {
+    messageHandler.on("DataLoaded", (data: any) => {
       // For consistency: Ensure that progress is always reported when the
       // entire PDF file has been loaded, regardless of how it was fetched.
       this.#onProgress({ loaded: data.length, total: data.length });
@@ -2740,7 +2831,7 @@ class WorkerTransport {
       this.downloadInfoCapability.resolve(data);
     });
 
-    messageHandler.on("StartRenderPage", data => {
+    messageHandler.on("StartRenderPage", (data: any) => {
       if (this.destroyed) {
         return; // Ignore any pending requests if the worker was terminated.
       }
@@ -2749,7 +2840,7 @@ class WorkerTransport {
       page._startRenderPage(data.transparency, data.cacheKey);
     });
 
-    messageHandler.on("commonobj", ([id, type, exportedData]) => {
+    messageHandler.on("commonobj", ([id, type, exportedData]: any) => {
       if (this.destroyed) {
         return null; // Ignore any pending requests if the worker was terminated.
       }
@@ -2769,8 +2860,8 @@ class WorkerTransport {
 
           const fontData = new FontInfo(exportedData);
           const inspectFont =
-            this._params.pdfBug && globalThis.FontInspector?.enabled
-              ? (font, url) => globalThis.FontInspector.fontAdded(font, url)
+            this._params.pdfBug && (globalThis as any).FontInspector?.enabled
+              ? (font: any, url: any) => (globalThis as any).FontInspector.fontAdded(font, url)
               : null;
           const font = new FontFaceObject(
             fontData,
@@ -2828,7 +2919,7 @@ class WorkerTransport {
       return null;
     });
 
-    messageHandler.on("obj", ([id, pageIndex, type, imageData]) => {
+    messageHandler.on("obj", ([id, pageIndex, type, imageData]: any) => {
       if (this.destroyed) {
         // Ignore any pending requests if the worker was terminated.
         return;
@@ -2854,7 +2945,7 @@ class WorkerTransport {
       }
     });
 
-    messageHandler.on("DocProgress", data => {
+    messageHandler.on("DocProgress", (data: any) => {
       if (this.destroyed) {
         return; // Ignore any pending requests if the worker was terminated.
       }
@@ -2862,7 +2953,7 @@ class WorkerTransport {
     });
 
     if (typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")) {
-      messageHandler.on("FetchBinaryData", async data => {
+      messageHandler.on("FetchBinaryData", async (data: any) => {
         if (this.destroyed) {
           throw new Error("Worker was destroyed.");
         }
@@ -2905,8 +2996,8 @@ class WorkerTransport {
       });
   }
 
-  extractPages(pageInfos) {
-    const params = {
+  extractPages(pageInfos: any) {
+    const params: any = {
       pageInfos,
     };
     let transfer;
@@ -2922,7 +3013,7 @@ class WorkerTransport {
       });
   }
 
-  getPage(pageNumber) {
+  getPage(pageNumber: any) {
     if (
       !Number.isInteger(pageNumber) ||
       pageNumber <= 0 ||
@@ -2941,7 +3032,7 @@ class WorkerTransport {
       .sendWithPromise("GetPage", {
         pageIndex: newPageIndex,
       })
-      .then(pageInfo => {
+      .then((pageInfo: any) => {
         if (this.destroyed) {
           throw new Error("Transport destroyed");
         }
@@ -2963,7 +3054,7 @@ class WorkerTransport {
     return promise;
   }
 
-  async getPageIndex(ref) {
+  async getPageIndex(ref: any) {
     if (!isRefProxy(ref)) {
       throw new Error("Invalid pageIndex request.");
     }
@@ -2978,7 +3069,7 @@ class WorkerTransport {
     return pageNumber - 1;
   }
 
-  getAnnotations(pageIndex, intent) {
+  getAnnotations(pageIndex: any, intent: any) {
     return this.messageHandler.sendWithPromise("GetAnnotations", {
       pageIndex: this.pagesMapper.getPageId(pageIndex + 1) - 1,
       intent,
@@ -3001,7 +3092,7 @@ class WorkerTransport {
     return this.messageHandler.sendWithPromise("GetDestinations", null);
   }
 
-  getDestination(id) {
+  getDestination(id: any) {
     if (typeof id !== "string") {
       return Promise.reject(new Error("Invalid destination request."));
     }
@@ -3034,7 +3125,7 @@ class WorkerTransport {
     return this.messageHandler.sendWithPromise("GetAttachments", null);
   }
 
-  getAnnotationsByType(types, pageIndexesToSkip) {
+  getAnnotationsByType(types: any, pageIndexesToSkip: any) {
     return this.messageHandler.sendWithPromise("GetAnnotationsByType", {
       types,
       pageIndexesToSkip,
@@ -3045,13 +3136,13 @@ class WorkerTransport {
     return this.#cacheSimpleMethod("GetDocJSActions");
   }
 
-  getPageJSActions(pageIndex) {
+  getPageJSActions(pageIndex: any) {
     return this.messageHandler.sendWithPromise("GetPageJSActions", {
       pageIndex: this.pagesMapper.getPageId(pageIndex + 1) - 1,
     });
   }
 
-  getStructTree(pageIndex) {
+  getStructTree(pageIndex: any) {
     return this.messageHandler.sendWithPromise("GetStructTree", {
       pageIndex: this.pagesMapper.getPageId(pageIndex + 1) - 1,
     });
@@ -3061,9 +3152,9 @@ class WorkerTransport {
     return this.messageHandler.sendWithPromise("GetOutline", null);
   }
 
-  getOptionalContentConfig(renderingIntent) {
+  getOptionalContentConfig(renderingIntent: any) {
     return this.#cacheSimpleMethod("GetOptionalContentConfig").then(
-      data => new OptionalContentConfig(data, renderingIntent)
+      (data: any) => new OptionalContentConfig(data, renderingIntent)
     );
   }
 
@@ -3075,7 +3166,7 @@ class WorkerTransport {
     const name = "GetMetadata";
 
     return this.#methodPromises.getOrInsertComputed(name, () =>
-      this.messageHandler.sendWithPromise(name, null).then(results => ({
+      this.messageHandler.sendWithPromise(name, null).then((results: any) => ({
         info: results[0],
         metadata: results[1] ? new Metadata(results[1]) : null,
         contentDispositionFilename: this.#fullReader?.filename ?? null,
@@ -3089,7 +3180,7 @@ class WorkerTransport {
     return this.messageHandler.sendWithPromise("GetMarkInfo", null);
   }
 
-  getRawData(data) {
+  getRawData(data: any) {
     return this.messageHandler.sendWithPromise("GetRawData", data);
   }
 
@@ -3117,7 +3208,7 @@ class WorkerTransport {
     TextLayer.cleanup();
   }
 
-  cachedPageNumber(ref) {
+  cachedPageNumber(ref: any) {
     if (!isRefProxy(ref)) {
       return null;
     }
@@ -3137,7 +3228,7 @@ class WorkerTransport {
  * Allows controlling of the rendering tasks.
  */
 class RenderTask {
-  _internalRenderTask = null;
+  _internalRenderTask: InternalRenderTask | null = null;
 
   /**
    * Callback for incremental rendering -- a function that will be called
@@ -3145,7 +3236,7 @@ class RenderTask {
    * function that is the first argument to the callback.
    * @type {function}
    */
-  onContinue = null;
+  onContinue: ((cont: () => void) => void) | null = null;
 
   /**
    * A function that will be synchronously called when the rendering tasks
@@ -3155,15 +3246,15 @@ class RenderTask {
    * @type {function}
    * @param {Error} error
    */
-  onError = null;
+  onError: ((error: any) => void) | null = null;
 
-  constructor(internalRenderTask) {
+  constructor(internalRenderTask: InternalRenderTask) {
     this._internalRenderTask = internalRenderTask;
 
     if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
       // For testing purposes.
       Object.defineProperty(this, "getOperatorList", {
-        value: () => this._internalRenderTask.operatorList,
+        value: () => this._internalRenderTask!.operatorList,
       });
     }
   }
@@ -3173,7 +3264,7 @@ class RenderTask {
    * @type {Promise<void>}
    */
   get promise() {
-    return this._internalRenderTask.capability.promise;
+    return this._internalRenderTask!.capability.promise;
   }
 
   /**
@@ -3184,7 +3275,7 @@ class RenderTask {
    * @param {number} [extraDelay]
    */
   cancel(extraDelay = 0) {
-    this._internalRenderTask.cancel(/* error = */ null, extraDelay);
+    this._internalRenderTask!.cancel(/* error = */ null, extraDelay);
   }
 
   /**
@@ -3192,11 +3283,11 @@ class RenderTask {
    * @type {boolean}
    */
   get separateAnnots() {
-    const { separateAnnots } = this._internalRenderTask.operatorList;
+    const { separateAnnots } = this._internalRenderTask!.operatorList;
     if (!separateAnnots) {
       return false;
     }
-    const { annotationCanvasMap } = this._internalRenderTask;
+    const { annotationCanvasMap } = this._internalRenderTask!;
     return (
       separateAnnots.form ||
       (separateAnnots.canvas && annotationCanvasMap?.size > 0)
@@ -3204,7 +3295,7 @@ class RenderTask {
   }
 
   get imageCoordinates() {
-    return this._internalRenderTask.imageCoordinates || null;
+    return this._internalRenderTask!.imageCoordinates || null;
   }
 }
 
@@ -3213,9 +3304,42 @@ class RenderTask {
  * @ignore
  */
 class InternalRenderTask {
-  #rAF = null;
+  #rAF: number | null = null;
 
   static #canvasInUse = new WeakSet();
+
+  declare callback: any;
+  declare params: any;
+  declare objs: any;
+  declare commonObjs: any;
+  declare annotationCanvasMap: any;
+  declare operatorListIdx: number | null;
+  declare operatorList: any;
+  declare _pageIndex: number;
+  declare canvasFactory: any;
+  declare filterFactory: any;
+  declare _pdfBug: boolean;
+  declare pageColors: any;
+  declare running: boolean;
+  declare graphicsReadyCallback: any;
+  declare graphicsReady: boolean;
+  declare _useRequestAnimationFrame: boolean;
+  declare cancelled: boolean;
+  declare capability: any;
+  declare task: RenderTask;
+  declare _cancelBound: any;
+  declare _continueBound: any;
+  declare _scheduleNextBound: any;
+  declare _nextBound: any;
+  declare _canvas: any;
+  declare _canvasContext: any;
+  declare _enableHWA: boolean;
+  declare _dependencyTracker: any;
+  declare _imagesTracker: any;
+  declare _operationsFilter: any;
+  declare stepper: any;
+  declare gfx: any;
+  declare imageCoordinates: any;
 
   constructor({
     callback,
@@ -3232,7 +3356,7 @@ class InternalRenderTask {
     pageColors = null,
     enableHWA = false,
     operationsFilter = null,
-  }) {
+  }: any) {
     this.callback = callback;
     this.params = params;
     this.objs = objs;
@@ -3274,7 +3398,7 @@ class InternalRenderTask {
     });
   }
 
-  initializeGraphics({ transparency = false, optionalContentConfig }) {
+  initializeGraphics({ transparency = false, optionalContentConfig }: any) {
     if (this.cancelled) {
       return;
     }
@@ -3289,8 +3413,8 @@ class InternalRenderTask {
       InternalRenderTask.#canvasInUse.add(this._canvas);
     }
 
-    if (this._pdfBug && globalThis.StepperManager?.enabled) {
-      this.stepper = globalThis.StepperManager.create(this._pageIndex);
+    if (this._pdfBug && (globalThis as any).StepperManager?.enabled) {
+      this.stepper = (globalThis as any).StepperManager.create(this._pageIndex);
       this.stepper.init(this.operatorList);
       this.stepper.nextBreakPoint = this.stepper.getNextBreakPoint();
     }
@@ -3334,7 +3458,7 @@ class InternalRenderTask {
     this.graphicsReadyCallback?.();
   }
 
-  cancel(error = null, extraDelay = 0) {
+  cancel(error: any = null, extraDelay = 0) {
     this.running = false;
     this.cancelled = true;
     this.gfx?.endDrawing();
@@ -3421,10 +3545,10 @@ const version =
 const build =
   typeof PDFJSDev !== "undefined" ? PDFJSDev.eval("BUNDLE_BUILD") : null;
 
+export type { OnProgressParameters };
 export {
   build,
   getDocument,
-  OnProgressParameters,
   PDFDataRangeTransport,
   PDFDocumentLoadingTask,
   PDFDocumentProxy,

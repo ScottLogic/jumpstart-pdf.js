@@ -13,12 +13,17 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+const INITIAL_DATA: unique symbol = Symbol("INITIAL_DATA");
 
-const INITIAL_DATA = Symbol("INITIAL_DATA");
+type ObjEntry = {
+  promise: Promise<any>;
+  resolve: (value?: any) => void;
+  reject: (reason?: any) => void;
+  data: typeof INITIAL_DATA | any;
+};
 
-const dataObj = () => ({
-  ...Promise.withResolvers(),
+const dataObj = (): ObjEntry => ({
+  ...Promise.withResolvers<any>(),
   data: INITIAL_DATA,
 });
 
@@ -28,7 +33,7 @@ const dataObj = () => ({
  * a worker. This class implements some basic methods to manage these objects.
  */
 class PDFObjects {
-  #objs = new Map();
+  #objs: Map<string, ObjEntry> = new Map();
 
   /**
    * If called *without* callback, this returns the data of `objId` but the
@@ -42,11 +47,11 @@ class PDFObjects {
    * @param {function} [callback]
    * @returns {any}
    */
-  get(objId, callback = null) {
+  get(objId: string, callback: ((data: any) => void) | null = null): any {
     // If there is a callback, then the get can be async and the object is
     // not required to be resolved right now.
     if (callback) {
-      const obj = this.#objs.getOrInsertComputed(objId, dataObj);
+      const obj = (this.#objs as any).getOrInsertComputed(objId, dataObj) as ObjEntry;
       obj.promise.then(() => callback(obj.data));
       return null;
     }
@@ -65,7 +70,7 @@ class PDFObjects {
    * @param {string} objId
    * @returns {boolean}
    */
-  has(objId) {
+  has(objId: string): boolean {
     const obj = this.#objs.get(objId);
     return !!obj && obj.data !== INITIAL_DATA;
   }
@@ -74,7 +79,7 @@ class PDFObjects {
    * @param {string} objId
    * @returns {boolean}
    */
-  delete(objId) {
+  delete(objId: string): boolean {
     const obj = this.#objs.get(objId);
     if (!obj || obj.data === INITIAL_DATA) {
       // Only allow removing the object *after* it's been resolved.
@@ -90,8 +95,8 @@ class PDFObjects {
    * @param {string} objId
    * @param {any} [data]
    */
-  resolve(objId, data = null) {
-    const obj = this.#objs.getOrInsertComputed(objId, dataObj);
+  resolve(objId: string, data: any = null): void {
+    const obj = (this.#objs as any).getOrInsertComputed(objId, dataObj) as ObjEntry;
     if (obj.data !== INITIAL_DATA) {
       throw new Error(`Object already resolved ${objId}.`);
     }
@@ -99,14 +104,14 @@ class PDFObjects {
     obj.resolve();
   }
 
-  clear() {
+  clear(): void {
     for (const { data } of this.#objs.values()) {
       data?.bitmap?.close(); // Release any `ImageBitmap` data.
     }
     this.#objs.clear();
   }
 
-  *[Symbol.iterator]() {
+  *[Symbol.iterator](): Generator<[string, any]> {
     for (const [objId, { data }] of this.#objs) {
       if (data !== INITIAL_DATA) {
         yield [objId, data];

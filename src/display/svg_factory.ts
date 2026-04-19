@@ -13,22 +13,20 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { SVG_NS } from "./display_utils.js";
 import { unreachable } from "../shared/util.js";
 
 class BaseSVGFactory {
   constructor() {
     if (
-      (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) &&
+      (typeof PDFJSDev === "undefined" || PDFJSDev!.test("TESTING")) &&
       this.constructor === BaseSVGFactory
     ) {
       unreachable("Cannot initialize BaseSVGFactory.");
     }
   }
 
-  create(width, height, skipDimensions = false) {
+  create(width: number, height: number, skipDimensions: boolean = false): Element {
     if (width <= 0 || height <= 0) {
       throw new Error("Invalid SVG dimensions");
     }
@@ -46,7 +44,7 @@ class BaseSVGFactory {
     return svg;
   }
 
-  createElement(type) {
+  createElement(type: string): Element {
     if (typeof type !== "string") {
       throw new Error("Invalid SVG element type");
     }
@@ -56,7 +54,7 @@ class BaseSVGFactory {
   /**
    * @ignore
    */
-  _createSVG(type) {
+  _createSVG(type: string): Element {
     unreachable("Abstract method `_createSVG` called.");
   }
 }
@@ -65,7 +63,7 @@ class DOMSVGFactory extends BaseSVGFactory {
   /**
    * @ignore
    */
-  _createSVG(type) {
+  override _createSVG(type: string): Element {
     return document.createElementNS(SVG_NS, type);
   }
 }

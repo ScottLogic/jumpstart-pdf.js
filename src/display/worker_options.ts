@@ -13,12 +13,10 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 class GlobalWorkerOptions {
-  static #port = null;
+  static #port: Worker | null = null;
 
-  static #src = "";
+  static #src: string = "";
 
   /**
    * @type {Worker | null}

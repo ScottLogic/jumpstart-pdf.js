@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import {
   _isValidExplicitDest,
   isNodeJS,
@@ -22,8 +20,8 @@ import {
   warn,
 } from "../shared/util.js";
 
-function getUrlProp(val) {
-  if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) {
+function getUrlProp(val: unknown): URL | null {
+  if (typeof PDFJSDev !== "undefined" && PDFJSDev!.test("MOZCENTRAL")) {
     return null; // The 'url' is unused with `PDFDataRangeTransport`.
   }
   if (val instanceof URL) {
@@ -32,19 +30,19 @@ function getUrlProp(val) {
   if (typeof val === "string") {
     if (
       typeof PDFJSDev !== "undefined" &&
-      PDFJSDev.test("GENERIC") &&
+      PDFJSDev!.test("GENERIC") &&
       isNodeJS
     ) {
       if (/^[a-z][a-z0-9\-+.]+:/i.test(val)) {
         return new URL(val);
       }
 
-      const url = process.getBuiltinModule("url");
+      const url = (process as any).getBuiltinModule("url");
       return new URL(url.pathToFileURL(val));
     }
 
     // The full path is required in the 'url' field.
-    const url = URL.parse(val, window.location);
+    const url = URL.parse(val, window.location.href);
     if (url) {
       return url;
     }
@@ -55,14 +53,14 @@ function getUrlProp(val) {
   );
 }
 
-function getDataProp(val) {
+function getDataProp(val: unknown): Uint8Array {
   // Converting string or array-like data to Uint8Array.
   if (
     typeof PDFJSDev !== "undefined" &&
-    PDFJSDev.test("GENERIC") &&
+    PDFJSDev!.test("GENERIC") &&
     isNodeJS &&
-    typeof Buffer !== "undefined" &&
-    val instanceof Buffer
+    typeof (globalThis as any).Buffer !== "undefined" &&
+    val instanceof (globalThis as any).Buffer
   ) {
     throw new Error(
       "Please provide binary data as `Uint8Array`, rather than `Buffer`."
@@ -80,9 +78,9 @@ function getDataProp(val) {
   if (
     val instanceof ArrayBuffer ||
     ArrayBuffer.isView(val) ||
-    (typeof val === "object" && !isNaN(val?.length))
+    (typeof val === "object" && val !== null && !isNaN((val as any).length))
   ) {
-    return new Uint8Array(val);
+    return new Uint8Array(val as any);
   }
   throw new Error(
     "Invalid PDF binary data: either TypedArray, " +
@@ -90,7 +88,7 @@ function getDataProp(val) {
   );
 }
 
-function getFactoryUrlProp(val) {
+function getFactoryUrlProp(val: unknown): string | null {
   if (typeof val !== "string") {
     return null;
   }
@@ -100,14 +98,16 @@ function getFactoryUrlProp(val) {
   throw new Error(`Invalid factory url: "${val}" must include trailing slash.`);
 }
 
-const isRefProxy = v =>
+const isRefProxy = (v: unknown): boolean =>
   typeof v === "object" &&
-  Number.isInteger(v?.num) &&
-  v.num >= 0 &&
-  Number.isInteger(v?.gen) &&
-  v.gen >= 0;
+  v !== null &&
+  Number.isInteger((v as any).num) &&
+  (v as any).num >= 0 &&
+  Number.isInteger((v as any).gen) &&
+  (v as any).gen >= 0;
 
-const isNameProxy = v => typeof v === "object" && typeof v?.name === "string";
+const isNameProxy = (v: unknown): boolean =>
+  typeof v === "object" && v !== null && typeof (v as any).name === "string";
 
 const isValidExplicitDest = _isValidExplicitDest.bind(
   null,
@@ -116,13 +116,13 @@ const isValidExplicitDest = _isValidExplicitDest.bind(
 );
 
 class LoopbackPort {
-  #listeners = new Map();
+  #listeners: Map<(...args: any[]) => any, (() => void) | null> = new Map();
 
-  #deferred = Promise.resolve();
+  #deferred: Promise<void> = Promise.resolve();
 
-  postMessage(obj, transfer) {
+  postMessage(obj: any, transfer?: Transferable[]): void {
     const event = {
-      data: structuredClone(obj, transfer ? { transfer } : null),
+      data: structuredClone(obj, transfer ? { transfer } : undefined),
     };
 
     this.#deferred.then(() => {
@@ -132,8 +132,12 @@ class LoopbackPort {
     });
   }
 
-  addEventListener(name, listener, options = null) {
-    let rmAbort = null;
+  addEventListener(
+    name: string,
+    listener: (...args: any[]) => any,
+    options: { signal?: AbortSignal } | null = null
+  ): void {
+    let rmAbort: (() => void) | null = null;
     if (options?.signal instanceof AbortSignal) {
       const { signal } = options;
       if (signal.aborted) {
@@ -148,14 +152,14 @@ class LoopbackPort {
     this.#listeners.set(listener, rmAbort);
   }
 
-  removeEventListener(name, listener) {
+  removeEventListener(name: string, listener: (...args: any[]) => any): void {
     const rmAbort = this.#listeners.get(listener);
     rmAbort?.();
 
     this.#listeners.delete(listener);
   }
 
-  terminate() {
+  terminate(): void {
     for (const [, rmAbort] of this.#listeners) {
       rmAbort?.();
     }

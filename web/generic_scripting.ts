@@ -13,11 +13,9 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { getPdfFilenameFromUrl } from "pdfjs-lib";
 
-async function docProperties(pdfDocument) {
+async function docProperties(pdfDocument: any): Promise<Record<string, unknown>> {
   const url = "",
     baseUrl = "";
   const { info, metadata, contentDispositionFilename, contentLength } =
@@ -36,7 +34,9 @@ async function docProperties(pdfDocument) {
 }
 
 class GenericScripting {
-  constructor(sandboxBundleSrc) {
+  _ready: Promise<any>;
+
+  constructor(sandboxBundleSrc: string) {
     this._ready = new Promise((resolve, reject) => {
       const sandbox =
         typeof PDFJSDev === "undefined"
@@ -50,17 +50,17 @@ class GenericScripting {
     });
   }
 
-  async createSandbox(data) {
+  async createSandbox(data: unknown): Promise<void> {
     const sandbox = await this._ready;
     sandbox.create(data);
   }
 
-  async dispatchEventInSandbox(event) {
+  async dispatchEventInSandbox(event: unknown): Promise<void> {
     const sandbox = await this._ready;
     setTimeout(() => sandbox.dispatchEvent(event), 0);
   }
 
-  async destroySandbox() {
+  async destroySandbox(): Promise<void> {
     const sandbox = await this._ready;
     sandbox.nukeSandbox();
   }

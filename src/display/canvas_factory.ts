@@ -13,16 +13,19 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { unreachable } from "../shared/util.js";
 
-class BaseCanvasFactory {
-  #enableHWA = false;
+type CanvasAndContext = {
+  canvas: HTMLCanvasElement | null;
+  context: CanvasRenderingContext2D | null;
+};
 
-  constructor({ enableHWA = false }) {
+class BaseCanvasFactory {
+  #enableHWA: boolean = false;
+
+  constructor({ enableHWA = false }: { enableHWA?: boolean } = {}) {
     if (
-      (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) &&
+      (typeof PDFJSDev === "undefined" || PDFJSDev!.test("TESTING")) &&
       this.constructor === BaseCanvasFactory
     ) {
       unreachable("Cannot initialize BaseCanvasFactory.");
@@ -30,7 +33,7 @@ class BaseCanvasFactory {
     this.#enableHWA = enableHWA;
   }
 
-  create(width, height) {
+  create(width: number, height: number): CanvasAndContext {
     if (width <= 0 || height <= 0) {
       throw new Error("Invalid canvas size");
     }
@@ -43,7 +46,7 @@ class BaseCanvasFactory {
     };
   }
 
-  reset({ canvas }, width, height) {
+  reset({ canvas }: { canvas: HTMLCanvasElement | null }, width: number, height: number): void {
     if (!canvas) {
       throw new Error("Canvas is not specified");
     }
@@ -54,7 +57,7 @@ class BaseCanvasFactory {
     canvas.height = height;
   }
 
-  destroy(canvasAndContext) {
+  destroy(canvasAndContext: CanvasAndContext): void {
     const { canvas } = canvasAndContext;
     if (!canvas) {
       throw new Error("Canvas is not specified");
@@ -69,13 +72,21 @@ class BaseCanvasFactory {
   /**
    * @ignore
    */
-  _createCanvas(width, height) {
+  _createCanvas(width: number, height: number): HTMLCanvasElement {
     unreachable("Abstract method `_createCanvas` called.");
   }
 }
 
 class DOMCanvasFactory extends BaseCanvasFactory {
-  constructor({ ownerDocument = globalThis.document, enableHWA = false }) {
+  _document: Document;
+
+  constructor({
+    ownerDocument = globalThis.document,
+    enableHWA = false,
+  }: {
+    ownerDocument?: Document;
+    enableHWA?: boolean;
+  } = {}) {
     super({ enableHWA });
     this._document = ownerDocument;
   }
@@ -83,7 +94,7 @@ class DOMCanvasFactory extends BaseCanvasFactory {
   /**
    * @ignore
    */
-  _createCanvas(width, height) {
+  override _createCanvas(width: number, height: number): HTMLCanvasElement {
     const canvas = this._document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;

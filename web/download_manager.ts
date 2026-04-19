@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { BaseDownloadManager } from "./base_download_manager.js";
 import { createValidAbsoluteUrl } from "pdfjs-lib";
 
@@ -26,7 +24,7 @@ if (typeof PDFJSDev !== "undefined" && !PDFJSDev.test("CHROME || GENERIC")) {
 }
 
 class DownloadManager extends BaseDownloadManager {
-  _triggerDownload(blobUrl, originalUrl, filename, isAttachment = false) {
+  _triggerDownload(blobUrl: string | null, originalUrl: string, filename: string, isAttachment = false): void {
     if (!blobUrl && !isAttachment) {
       // Fallback to downloading non-attachments by their URL.
       if (!createValidAbsoluteUrl(originalUrl, "http://example.com")) {
@@ -36,7 +34,7 @@ class DownloadManager extends BaseDownloadManager {
     }
 
     const a = document.createElement("a");
-    a.href = blobUrl;
+    a.href = blobUrl!;
     a.target = "_parent";
     // Use a.download if available. This increases the likelihood that
     // the file is downloaded instead of opened by another PDF plugin.
@@ -50,7 +48,7 @@ class DownloadManager extends BaseDownloadManager {
     a.remove();
   }
 
-  _getOpenDataUrl(blobUrl, filename, dest = null) {
+  _getOpenDataUrl(blobUrl: string, filename: string, dest: string | null = null): string {
     if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("COMPONENTS")) {
       throw new Error("Opening data is not supported in `COMPONENTS` builds.");
     }

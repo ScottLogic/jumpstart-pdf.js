@@ -13,14 +13,10 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
-/** @typedef {import("../src/display/api").PDFPageProxy} PDFPageProxy */
-
 import { FeatureTest, makeMap, shadow } from "pdfjs-lib";
 import { removeNullCharacters } from "./ui_utils.js";
 
-const PDF_ROLE_TO_HTML_ROLE = {
+const PDF_ROLE_TO_HTML_ROLE: Record<string, string | null> = {
   // Document level structure types
   Document: null, // There's a "document" role, but it doesn't make sense here.
   DocumentFragment: null,
@@ -107,14 +103,14 @@ const MathMLElements = new Set([
 const MathMLNamespace = "http://www.w3.org/1998/Math/MathML";
 
 class MathMLSanitizer {
-  static get sanitizer() {
+  static get sanitizer(): unknown {
     // From https://w3c.github.io/mathml-docs/mathml-safe-list.
 
     return shadow(
       this,
       "sanitizer",
       FeatureTest.isSanitizerSupported
-        ? new Sanitizer({
+        ? new (Sanitizer as any)({
             elements: [...MathMLElements].map(name => ({
               name,
               namespace: MathMLNamespace,
@@ -166,45 +162,26 @@ class MathMLSanitizer {
 
 const HEADING_PATTERN = /^H(\d+)$/;
 
-/**
- * @typedef {Object} StructTreeLayerBuilderOptions
- * @property {PDFPageProxy} pdfPage
- * @property {Object} rawDims
- */
-
 class StructTreeLayerBuilder {
-  #promise;
+  #promise: Promise<any>;
+  #treeDom: Element | null = null;
+  #treePromise: Promise<Element | null> | undefined;
+  #elementAttributes: Map<string, Map<any, any>> = new Map();
+  #rawDims: any;
+  #elementsToAddToTextLayer: Map<string, HTMLSpanElement> | null = null;
+  #elementsToHideInTextLayer: string[] | null = null;
+  #elementsToStealFromTextLayer: Array<Element | string[]> | null = null;
 
-  #treeDom = null;
-
-  #treePromise;
-
-  #elementAttributes = new Map();
-
-  #rawDims;
-
-  #elementsToAddToTextLayer = null;
-
-  #elementsToHideInTextLayer = null;
-
-  #elementsToStealFromTextLayer = null;
-
-  /**
-   * @param {StructTreeLayerBuilderOptions} options
-   */
-  constructor(pdfPage, rawDims) {
+  constructor(pdfPage: any, rawDims: any) {
     this.#promise = pdfPage.getStructTree();
     this.#rawDims = rawDims;
   }
 
-  /**
-   * @returns {Promise<void>}
-   */
-  async render() {
+  async render(): Promise<Element | null> {
     if (this.#treePromise) {
       return this.#treePromise;
     }
-    const { promise, resolve, reject } = Promise.withResolvers();
+    const { promise, resolve, reject } = Promise.withResolvers<Element | null>();
     this.#treePromise = promise;
 
     try {
@@ -212,7 +189,7 @@ class StructTreeLayerBuilder {
     } catch (ex) {
       reject(ex);
     }
-    this.#promise = null;
+    this.#promise = null as any;
 
     this.#treeDom?.classList.add("structTree");
     resolve(this.#treeDom);
@@ -220,7 +197,7 @@ class StructTreeLayerBuilder {
     return promise;
   }
 
-  async getAriaAttributes(annotationId) {
+  async getAriaAttributes(annotationId: string): Promise<Map<any, any> | undefined> {
     try {
       await this.render();
       return this.#elementAttributes.get(annotationId);
@@ -228,22 +205,24 @@ class StructTreeLayerBuilder {
       // If the structTree cannot be fetched, parsed, and/or rendered,
       // ensure that e.g. the AnnotationLayer won't break completely.
     }
-    return null;
+    return undefined;
   }
 
-  hide() {
-    if (this.#treeDom && !this.#treeDom.hidden) {
-      this.#treeDom.hidden = true;
+  hide(): void {
+    const dom = this.#treeDom as HTMLElement | null;
+    if (dom && !dom.hidden) {
+      dom.hidden = true;
     }
   }
 
-  show() {
-    if (this.#treeDom?.hidden) {
-      this.#treeDom.hidden = false;
+  show(): void {
+    const dom = this.#treeDom as HTMLElement | null;
+    if (dom?.hidden) {
+      dom.hidden = false;
     }
   }
 
-  #setAttributes(structElement, htmlElement) {
+  #setAttributes(structElement: any, htmlElement: Element): void {
     const { alt, id, lang } = structElement;
     if (alt !== undefined) {
       // Don't add the label in the struct tree layer but on the annotation
@@ -273,7 +252,7 @@ class StructTreeLayerBuilder {
     }
   }
 
-  #addImageInTextLayer(node, element) {
+  #addImageInTextLayer(node: any, element: Element): boolean {
     const { alt, bbox, children } = node;
     const child = children?.[0];
     if (!this.#rawDims || !alt || !bbox || child?.type !== "content") {
@@ -306,7 +285,7 @@ class StructTreeLayerBuilder {
     return true;
   }
 
-  updateTextLayer() {
+  updateTextLayer(): void {
     if (this.#elementsToAddToTextLayer) {
       for (const [id, img] of this.#elementsToAddToTextLayer) {
         document.getElementById(id)?.append(img);
@@ -318,7 +297,7 @@ class StructTreeLayerBuilder {
       for (const id of this.#elementsToHideInTextLayer) {
         const elem = document.getElementById(id);
         if (elem) {
-          elem.ariaHidden = true;
+          elem.ariaHidden = "true";
         }
       }
       this.#elementsToHideInTextLayer.length = 0;
@@ -330,13 +309,13 @@ class StructTreeLayerBuilder {
         i < ii;
         i += 2
       ) {
-        const element = this.#elementsToStealFromTextLayer[i];
-        const ids = this.#elementsToStealFromTextLayer[i + 1];
+        const element = this.#elementsToStealFromTextLayer[i] as Element;
+        const ids = this.#elementsToStealFromTextLayer[i + 1] as string[];
         let textContent = "";
         for (const id of ids) {
           const elem = document.getElementById(id);
           if (elem) {
-            textContent += elem.textContent.trim() || "";
+            textContent += elem.textContent!.trim() || "";
             // Aria-hide the element in order to avoid duplicate reading of the
             // math content by screen readers.
             elem.ariaHidden = "true";
@@ -351,7 +330,7 @@ class StructTreeLayerBuilder {
     }
   }
 
-  #collectIds(node, ids) {
+  #collectIds(node: any, ids: string[]): void {
     if (!node) {
       return;
     }
@@ -363,19 +342,19 @@ class StructTreeLayerBuilder {
     }
   }
 
-  #walk(node, parentNodes = []) {
+  #walk(node: any, parentNodes: any[] = []): Element | null {
     if (!node) {
       return null;
     }
 
-    let element;
+    let element: Element | undefined;
     let visitChildren = true;
     if ("role" in node) {
       const { role } = node;
       if (MathMLElements.has(role)) {
         element = document.createElementNS(MathMLNamespace, role);
-        const ids = [];
-        (this.#elementsToStealFromTextLayer ||= []).push(element, ids);
+        const ids: string[] = [];
+        (this.#elementsToStealFromTextLayer ||= []).push(element!, ids);
         for (const { type, id } of node.children || []) {
           if (type === "content" && id) {
             ids.push(id);
@@ -386,25 +365,25 @@ class StructTreeLayerBuilder {
       }
       const match = role.match(HEADING_PATTERN);
       if (match) {
-        element.setAttribute("role", "heading");
-        element.setAttribute("aria-level", match[1]);
+        element!.setAttribute("role", "heading");
+        element!.setAttribute("aria-level", match[1]);
       } else if (PDF_ROLE_TO_HTML_ROLE[role]) {
-        element.setAttribute(
+        element!.setAttribute(
           "role",
           role === "TH" &&
             parentNodes.at(-1)?.role === "TR" &&
             parentNodes.at(-2)?.role === "TBody"
             ? "rowheader" // TH inside TR itself in TBody is a rowheader.
-            : PDF_ROLE_TO_HTML_ROLE[role]
+            : PDF_ROLE_TO_HTML_ROLE[role]!
         );
       }
-      if (role === "Figure" && this.#addImageInTextLayer(node, element)) {
-        return element;
+      if (role === "Figure" && this.#addImageInTextLayer(node, element!)) {
+        return element!;
       }
       if (role === "Formula") {
         if (node.mathML && MathMLSanitizer.sanitizer) {
           visitChildren = false;
-          element.setHTML(node.mathML, {
+          (element as any).setHTML(node.mathML, {
             sanitizer: MathMLSanitizer.sanitizer,
           });
           // Hide all the corresponding content elements in the text layer in
@@ -439,7 +418,10 @@ class StructTreeLayerBuilder {
       } else if (visitChildren) {
         parentNodes.push(node);
         for (const kid of node.children) {
-          element.append(this.#walk(kid, parentNodes));
+          const child = this.#walk(kid, parentNodes);
+          if (child) {
+            element.append(child);
+          }
         }
         parentNodes.pop();
       }

@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { binarySearchFirstItem } from "./ui_utils.js";
 
 /**
@@ -27,13 +25,13 @@ import { binarySearchFirstItem } from "./ui_utils.js";
 class TextAccessibilityManager {
   #enabled = false;
 
-  #textChildren = null;
+  #textChildren: HTMLElement[] | null = null;
 
-  #textNodes = new Map();
+  #textNodes = new Map<string, number>();
 
-  #waitingElements = new Map();
+  #waitingElements = new Map<HTMLElement, boolean>();
 
-  setTextMapping(textDivs) {
+  setTextMapping(textDivs: HTMLElement[]): void {
     this.#textChildren = textDivs;
   }
 
@@ -45,7 +43,7 @@ class TextAccessibilityManager {
    * @param {HTMLElement} e2
    * @returns {number}
    */
-  static #compareElementPositions(e1, e2) {
+  static #compareElementPositions(e1: HTMLElement, e2: HTMLElement): number {
     const rect1 = e1.getBoundingClientRect();
     const rect2 = e2.getBoundingClientRect();
 
@@ -82,7 +80,7 @@ class TextAccessibilityManager {
   /**
    * Function called when the text layer has finished rendering.
    */
-  enable() {
+  enable(): void {
     if (this.#enabled) {
       throw new Error("TextAccessibilityManager is already enabled.");
     }
@@ -116,7 +114,7 @@ class TextAccessibilityManager {
     this.#waitingElements.clear();
   }
 
-  disable() {
+  disable(): void {
     if (!this.#enabled) {
       return;
     }
@@ -133,7 +131,7 @@ class TextAccessibilityManager {
    * Remove an aria-owns id from a node in the text layer.
    * @param {HTMLElement} element
    */
-  removePointerInTextLayer(element) {
+  removePointerInTextLayer(element: HTMLElement): void {
     if (!this.#enabled) {
       this.#waitingElements.delete(element);
       return;
@@ -168,7 +166,7 @@ class TextAccessibilityManager {
     }
   }
 
-  #addIdToAriaOwns(id, node) {
+  #addIdToAriaOwns(id: string, node: HTMLElement): void {
     const owns = node.getAttribute("aria-owns");
     if (!owns?.includes(id)) {
       node.setAttribute("aria-owns", owns ? `${owns} ${id}` : id);
@@ -183,7 +181,7 @@ class TextAccessibilityManager {
    * @param {boolean} isRemovable
    * @returns {string|null} The id in the struct tree if any.
    */
-  addPointerInTextLayer(element, isRemovable) {
+  addPointerInTextLayer(element: HTMLElement, isRemovable: boolean): string | null {
     const { id } = element;
     if (!id) {
       return null;
@@ -206,7 +204,7 @@ class TextAccessibilityManager {
 
     const index = binarySearchFirstItem(
       children,
-      node =>
+      (node: HTMLElement) =>
         TextAccessibilityManager.#compareElementPositions(element, node) < 0
     );
 
@@ -215,7 +213,7 @@ class TextAccessibilityManager {
     this.#addIdToAriaOwns(id, child);
     this.#textNodes.set(id, nodeIndex);
 
-    const parent = child.parentNode;
+    const parent = child.parentNode as HTMLElement | null;
     return parent?.classList.contains("markedContent") ? parent.id : null;
   }
 
@@ -224,7 +222,12 @@ class TextAccessibilityManager {
    * @param {HTMLDivElement} element
    * @returns {string|null} The id in the struct tree if any.
    */
-  moveElementInDOM(container, element, contentElement, isRemovable) {
+  moveElementInDOM(
+    container: HTMLElement,
+    element: HTMLElement,
+    contentElement: HTMLElement,
+    isRemovable: boolean
+  ): string | null {
     const id = this.addPointerInTextLayer(contentElement, isRemovable);
 
     if (!container.hasChildNodes()) {
@@ -234,7 +237,7 @@ class TextAccessibilityManager {
 
     const children = Array.from(container.childNodes).filter(
       node => node !== element
-    );
+    ) as HTMLElement[];
 
     if (children.length === 0) {
       return id;
@@ -242,7 +245,7 @@ class TextAccessibilityManager {
 
     const index = binarySearchFirstItem(
       children,
-      node =>
+      (node: HTMLElement) =>
         TextAccessibilityManager.#compareElementPositions(element, node) < 0
     );
 

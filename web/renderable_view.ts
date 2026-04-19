@@ -21,21 +21,15 @@ const RenderingStates = {
 };
 
 class RenderableView {
-  /**
-   * Unique ID for rendering queue.
-   * @type {string}
-   */
+  /** Unique ID for rendering queue. */
   renderingId = "";
 
-  /**
-   * @type {import("../src/display/api").RenderTask | null}
-   */
-  renderTask = null;
+  renderTask: unknown = null;
 
-  /**
-   * @type {function | null}
-   */
-  resume = null;
+  resume: (() => void) | null = null;
+
+  /** Optional zoomed-in detail view for this page. */
+  detailView?: RenderableView;
 
   constructor() {
     if (
@@ -63,7 +57,7 @@ class RenderableView {
   /**
    * @returns {Promise} Resolved on draw completion.
    */
-  async draw() {
+  async draw(): Promise<void> {
     throw new Error("Not implemented: draw");
   }
 }

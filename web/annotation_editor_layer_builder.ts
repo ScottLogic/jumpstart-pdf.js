@@ -13,63 +13,39 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
-/** @typedef {import("../src/display/api").PDFPageProxy} PDFPageProxy */
-
-/** @typedef {import("../src/display/display_utils").PageViewport} PageViewport */
-
-/** @typedef {import("../src/display/editor/tools.js").AnnotationEditorUIManager} AnnotationEditorUIManager */
-
-/** @typedef {import("./text_accessibility.js").TextAccessibilityManager} TextAccessibilityManager */
-
-/** @typedef {import("../src/display/annotation_layer.js").AnnotationLayer} AnnotationLayer */
-
-/** @typedef {import("../src/display/struct_tree_layer_builder.js").StructTreeLayerBuilder} StructTreeLayerBuilder */
-
 import { AnnotationEditorLayer } from "pdfjs-lib";
 import { GenericL10n } from "web-null_l10n";
 
-/**
- * @typedef {Object} AnnotationEditorLayerBuilderOptions
- * @property {AnnotationEditorUIManager} [uiManager]
- * @property {number} pageIndex
- * @property {L10n} [l10n]
- * @property {StructTreeLayerBuilder} [structTreeLayer]
- * @property {TextAccessibilityManager} [accessibilityManager]
- * @property {AnnotationLayer} [annotationLayer]
- * @property {TextLayer} [textLayer]
- * @property {DrawLayer} [drawLayer]
- * @property {function} [onAppend]
- */
-
-/**
- * @typedef {Object} AnnotationEditorLayerBuilderRenderOptions
- * @property {PageViewport} viewport
- * @property {string} [intent] - The default value is "display".
- */
-
 class AnnotationEditorLayerBuilder {
-  #annotationLayer = null;
+  #annotationLayer: any = null;
+  #drawLayer: any = null;
+  #onAppend: ((div: HTMLDivElement) => void) | null = null;
+  #structTreeLayer: any = null;
+  #textLayer: any = null;
+  #uiManager: any;
 
-  #drawLayer = null;
+  pageIndex: number;
+  accessibilityManager: any;
+  l10n: any;
+  annotationEditorLayer: any;
+  div: HTMLDivElement | null;
+  _cancelled: boolean;
 
-  #onAppend = null;
-
-  #structTreeLayer = null;
-
-  #textLayer = null;
-
-  #uiManager;
-
-  /**
-   * @param {AnnotationEditorLayerBuilderOptions} options
-   */
-  constructor(options) {
+  constructor(options: {
+    uiManager?: any;
+    pageIndex: number;
+    l10n?: any;
+    structTreeLayer?: any;
+    accessibilityManager?: any;
+    annotationLayer?: any;
+    textLayer?: any;
+    drawLayer?: any;
+    onAppend?: ((div: HTMLDivElement) => void) | null;
+  }) {
     this.pageIndex = options.pageIndex;
     this.accessibilityManager = options.accessibilityManager;
     this.l10n = options.l10n;
-    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
+    if (typeof PDFJSDev === "undefined" || PDFJSDev!.test("GENERIC")) {
       this.l10n ||= new GenericL10n();
     }
     this.annotationEditorLayer = null;
@@ -83,16 +59,12 @@ class AnnotationEditorLayerBuilder {
     this.#structTreeLayer = options.structTreeLayer || null;
   }
 
-  updatePageIndex(newPageIndex) {
+  updatePageIndex(newPageIndex: number): void {
     this.pageIndex = newPageIndex;
     this.annotationEditorLayer?.updatePageIndex(newPageIndex);
   }
 
-  /**
-   * @param {AnnotationEditorLayerBuilderRenderOptions} options
-   * @returns {Promise<void>}
-   */
-  async render({ viewport, intent = "display" }) {
+  async render({ viewport, intent = "display" }: { viewport: any; intent?: string }): Promise<void> {
     if (intent !== "display") {
       return;
     }
@@ -139,7 +111,7 @@ class AnnotationEditorLayerBuilder {
     this.show();
   }
 
-  cancel() {
+  cancel(): void {
     this._cancelled = true;
 
     if (!this.div) {
@@ -148,7 +120,7 @@ class AnnotationEditorLayerBuilder {
     this.annotationEditorLayer.destroy();
   }
 
-  hide() {
+  hide(): void {
     if (!this.div) {
       return;
     }
@@ -156,7 +128,7 @@ class AnnotationEditorLayerBuilder {
     this.div.hidden = true;
   }
 
-  show() {
+  show(): void {
     if (!this.div || this.annotationEditorLayer.isInvisible) {
       return;
     }

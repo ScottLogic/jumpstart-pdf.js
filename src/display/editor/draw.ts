@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+
 
 import { AnnotationEditorParamsType, unreachable } from "../../shared/util.js";
 import { noContextMenu, stopEvent } from "../display_utils.js";
@@ -23,12 +23,12 @@ import { CurrentPointers } from "./tools.js";
 class DrawingOptions {
   #svgProperties = Object.create(null);
 
-  updateProperty(name, value) {
-    this[name] = value;
+  updateProperty(name: any, value: any) {
+    (this as any)[name] = value;
     this.updateSVGProperty(name, value);
   }
 
-  updateProperties(properties) {
+  updateProperties(properties: any) {
     if (!properties) {
       return;
     }
@@ -39,7 +39,7 @@ class DrawingOptions {
     }
   }
 
-  updateSVGProperty(name, value) {
+  updateSVGProperty(name: any, value: any) {
     this.#svgProperties[name] = value;
   }
 
@@ -66,27 +66,43 @@ class DrawingOptions {
  * Basic draw editor.
  */
 class DrawingEditor extends AnnotationEditor {
-  #drawOutlines = null;
+  declare parent: any;
+  declare _drawingOptions: any;
+  declare _uiManager: any;
+  declare annotationElementId: any;
+  declare div: any;
+  declare isAttachedToDOM: any;
+  declare rotation: any;
+  declare x: any;
+  declare y: any;
+  declare width: any;
+  declare height: any;
+  declare pageTranslation: any;
+  declare pageDimensions: any;
 
-  #mustBeCommitted;
+  #drawOutlines: any = null;
 
-  _colorPicker = null;
+  #mustBeCommitted: any;
 
-  _drawId = null;
+  _colorPicker: any = null;
+
+  _drawId: any = null;
 
   static _currentDrawId = -1;
 
-  static _currentParent = null;
+  static _currentParent: any = null;
 
-  static #currentDraw = null;
+  static #currentDraw: any = null;
 
-  static #currentDrawingAC = null;
+  static #currentDrawingAC: any = null;
 
-  static #currentDrawingOptions = null;
+  static #currentDrawingOptions: any = null;
+
+  static _defaultDrawingOptions: any = null;
 
   static _INNER_MARGIN = 3;
 
-  constructor(params) {
+  constructor(params: any) {
     super(params);
     this.#mustBeCommitted = params.mustBeCommitted || false;
 
@@ -95,18 +111,18 @@ class DrawingEditor extends AnnotationEditor {
 
   /** @inheritdoc */
   onUpdatedColor() {
-    this._colorPicker?.update(this.color);
+    this._colorPicker?.update((this as any).color);
     super.onUpdatedColor();
   }
 
-  _addOutlines(params) {
+  _addOutlines(params: any) {
     if (params.drawOutlines) {
       this.#createDrawOutlines(params);
       this.#addToDrawLayer();
     }
   }
 
-  #createDrawOutlines({ drawOutlines, drawId, drawingOptions }) {
+  #createDrawOutlines({ drawOutlines, drawId, drawingOptions }: any) {
     this.#drawOutlines = drawOutlines;
     this._drawingOptions ||= drawingOptions;
     if (!this.annotationElementId) {
@@ -129,7 +145,7 @@ class DrawingEditor extends AnnotationEditor {
     this.#updateBbox(drawOutlines.box);
   }
 
-  #createDrawing(drawOutlines, parent) {
+  #createDrawing(drawOutlines: any, parent: any) {
     const { id } = parent.drawLayer.draw(
       DrawingEditor._mergeSVGProperties(
         this._drawingOptions.toSVGProperties(),
@@ -141,7 +157,7 @@ class DrawingEditor extends AnnotationEditor {
     return id;
   }
 
-  static _mergeSVGProperties(p1, p2) {
+  static _mergeSVGProperties(p1: any, p2: any) {
     const p1Keys = new Set(Object.keys(p1));
 
     for (const [key, value] of Object.entries(p2)) {
@@ -158,8 +174,9 @@ class DrawingEditor extends AnnotationEditor {
    * @param {Object} options
    * @return {DrawingOptions} the default options to use for a new editor.
    */
-  static getDefaultDrawingOptions(_options) {
+  static getDefaultDrawingOptions(_options: any): any {
     unreachable("Not implemented");
+    return null;
   }
 
   /**
@@ -167,8 +184,9 @@ class DrawingEditor extends AnnotationEditor {
    *   parameter types and the name of the options.
    */
 
-  static get typesMap() {
+  static get typesMap(): any {
     unreachable("Not implemented");
+    return null;
   }
 
   static get isDrawer() {
@@ -184,14 +202,14 @@ class DrawingEditor extends AnnotationEditor {
   }
 
   /** @inheritdoc */
-  static updateDefaultParams(type, value) {
-    const propertyName = this.typesMap.get(type);
+  static updateDefaultParams(type: any, value: any) {
+    const propertyName = (this as any).typesMap.get(type);
     if (propertyName) {
       this._defaultDrawingOptions.updateProperty(propertyName, value);
     }
     if (this._currentParent) {
       DrawingEditor.#currentDraw.updateProperty(propertyName, value);
-      this._currentParent.drawLayer.updateProperties(
+      (this._currentParent as any).drawLayer.updateProperties(
         this._currentDrawId,
         this._defaultDrawingOptions.toSVGProperties()
       );
@@ -199,8 +217,8 @@ class DrawingEditor extends AnnotationEditor {
   }
 
   /** @inheritdoc */
-  updateParams(type, value) {
-    const propertyName = this.constructor.typesMap.get(type);
+  updateParams(type: any, value: any) {
+    const propertyName = (this.constructor as any).typesMap.get(type);
     if (propertyName) {
       this._updateProperty(type, propertyName, value);
     }
@@ -209,18 +227,18 @@ class DrawingEditor extends AnnotationEditor {
   /** @inheritdoc */
   static get defaultPropertiesToUpdate() {
     const properties = [];
-    const options = this._defaultDrawingOptions;
-    for (const [type, name] of this.typesMap) {
+    const options = (this as any)._defaultDrawingOptions;
+    for (const [type, name] of (this as any).typesMap) {
       properties.push([type, options[name]]);
     }
     return properties;
   }
 
   /** @inheritdoc */
-  get propertiesToUpdate() {
+  get propertiesToUpdate(): any {
     const properties = [];
     const { _drawingOptions } = this;
-    for (const [type, name] of this.constructor.typesMap) {
+    for (const [type, name] of (this.constructor as any).typesMap) {
       properties.push([type, _drawingOptions[name]]);
     }
     return properties;
@@ -230,10 +248,10 @@ class DrawingEditor extends AnnotationEditor {
    * Update a property and make this action undoable.
    * @param {string} color
    */
-  _updateProperty(type, name, value) {
+  _updateProperty(type: any, name: any, value: any) {
     const options = this._drawingOptions;
     const savedValue = options[name];
-    const setter = val => {
+    const setter = (val: any) => {
       options.updateProperty(name, val);
       const bbox = this.#drawOutlines.updateProperty(name, val);
       if (bbox) {
@@ -243,7 +261,7 @@ class DrawingEditor extends AnnotationEditor {
         this._drawId,
         options.toSVGProperties()
       );
-      if (type === this.colorType) {
+      if (type === (this as any).colorType) {
         this.onUpdatedColor();
       }
     };
@@ -289,7 +307,7 @@ class DrawingEditor extends AnnotationEditor {
   }
 
   /** @inheritdoc */
-  _onTranslating(_x, _y) {
+  _onTranslating(_x: any, _y: any) {
     this.parent?.drawLayer.updateProperties(this._drawId, {
       bbox: this.#rotateBox(),
     });
@@ -360,7 +378,7 @@ class DrawingEditor extends AnnotationEditor {
   }
 
   /** @inheritdoc */
-  onceAdded(focus) {
+  onceAdded(focus: any) {
     if (!this.annotationElementId) {
       this.parent.addUndoableEditor(this);
     }
@@ -401,7 +419,7 @@ class DrawingEditor extends AnnotationEditor {
     }
   }
 
-  setParent(parent) {
+  setParent(parent: any) {
     let mustBeSelected = false;
     if (this.parent && !parent) {
       this._uiManager.removeShouldRescale(this);
@@ -446,7 +464,7 @@ class DrawingEditor extends AnnotationEditor {
     this._drawId = this.#createDrawing(this.#drawOutlines, parent);
   }
 
-  #convertToParentSpace([x, y, width, height]) {
+  #convertToParentSpace([x, y, width, height]: any) {
     const {
       parentDimensions: [pW, pH],
       rotation,
@@ -484,7 +502,7 @@ class DrawingEditor extends AnnotationEditor {
     }
   }
 
-  #updateBbox(bbox) {
+  #updateBbox(bbox: any) {
     [this.x, this.y, this.width, this.height] =
       this.#convertToParentSpace(bbox);
     if (this.div) {
@@ -668,11 +686,11 @@ class DrawingEditor extends AnnotationEditor {
    * @param {number} parentHeight - The parent height.
    * @param {number} rotation - The parent rotation.
    */
-  static createDrawerInstance(_x, _y, _parentWidth, _parentHeight, _rotation) {
+  static createDrawerInstance(_x: any, _y: any, _parentWidth: any, _parentHeight: any, _rotation: any) {
     unreachable("Not implemented");
   }
 
-  static startDrawing(parent, uiManager, _isLTR, event) {
+  static startDrawing(parent: any, uiManager: any, _isLTR: any, event: any) {
     // The pointerType of CurrentPointer is set when the user starts an empty
     // drawing session. If, in the same drawing session, the user starts using a
     // different type of pointer (e.g. a pen and then a finger), we just return.
@@ -698,7 +716,7 @@ class DrawingEditor extends AnnotationEditor {
 
     window.addEventListener(
       "pointerup",
-      e => {
+      (e: any) => {
         if (CurrentPointers.isSamePointerIdOrRemove(e.pointerId)) {
           this._endDraw(e);
         }
@@ -707,7 +725,7 @@ class DrawingEditor extends AnnotationEditor {
     );
     window.addEventListener(
       "pointercancel",
-      e => {
+      (e: any) => {
         if (CurrentPointers.isSamePointerIdOrRemove(e.pointerId)) {
           this._currentParent.endDrawingSession();
         }
@@ -716,7 +734,7 @@ class DrawingEditor extends AnnotationEditor {
     );
     window.addEventListener(
       "pointerdown",
-      e => {
+      (e: any) => {
         if (!CurrentPointers.isSamePointerType(e.pointerType)) {
           // For example, we started with a pen and the user
           // is now using a finger.
@@ -749,7 +767,7 @@ class DrawingEditor extends AnnotationEditor {
     });
     target.addEventListener(
       "touchmove",
-      e => {
+      (e: any) => {
         if (CurrentPointers.isSameTimeStamp(e.timeStamp)) {
           // This move event is used to draw so we don't want to scroll.
           stopEvent(e);
@@ -783,7 +801,7 @@ class DrawingEditor extends AnnotationEditor {
       parentHeight,
       rotation
     );
-    DrawingEditor.#currentDrawingOptions = this.getDefaultDrawingOptions();
+    DrawingEditor.#currentDrawingOptions = this.getDefaultDrawingOptions(undefined);
     this._currentParent = parent;
 
     ({ id: this._currentDrawId } = parent.drawLayer.draw(
@@ -796,7 +814,7 @@ class DrawingEditor extends AnnotationEditor {
     ));
   }
 
-  static _drawMove(event) {
+  static _drawMove(event: any) {
     CurrentPointers.isSameTimeStamp(event.timeStamp);
     if (!DrawingEditor.#currentDraw) {
       return;
@@ -820,7 +838,7 @@ class DrawingEditor extends AnnotationEditor {
     stopEvent(event);
   }
 
-  static _cleanup(all) {
+  static _cleanup(all: any) {
     if (all) {
       this._currentDrawId = -1;
       this._currentParent = null;
@@ -836,7 +854,7 @@ class DrawingEditor extends AnnotationEditor {
     }
   }
 
-  static _endDraw(event) {
+  static _endDraw(event: any) {
     const parent = this._currentParent;
     if (!parent) {
       return;
@@ -875,7 +893,7 @@ class DrawingEditor extends AnnotationEditor {
     this.endDrawing(/* isAborted = */ false);
   }
 
-  static endDrawing(isAborted) {
+  static endDrawing(isAborted: any) {
     const parent = this._currentParent;
     if (!parent) {
       return null;
@@ -917,7 +935,7 @@ class DrawingEditor extends AnnotationEditor {
    * Create the drawing options.
    * @param {Object} _data
    */
-  createDrawingOptions(_data) {}
+  createDrawingOptions(_data: any) {}
 
   /**
    * Deserialize the drawing outlines.
@@ -930,18 +948,18 @@ class DrawingEditor extends AnnotationEditor {
    * @returns {Object} The deserialized outlines.
    */
   static deserializeDraw(
-    _pageX,
-    _pageY,
-    _pageWidth,
-    _pageHeight,
-    _innerWidth,
-    _data
+    _pageX: any,
+    _pageY: any,
+    _pageWidth: any,
+    _pageHeight: any,
+    _innerWidth: any,
+    _data: any
   ) {
     unreachable("Not implemented");
   }
 
   /** @inheritdoc */
-  static async deserialize(data, parent, uiManager) {
+  static async deserialize(data: any, parent: any, uiManager: any) {
     const {
       rawDims: { pageWidth, pageHeight, pageX, pageY },
     } = parent.viewport;
@@ -963,7 +981,7 @@ class DrawingEditor extends AnnotationEditor {
     return editor;
   }
 
-  serializeDraw(isForCopying) {
+  serializeDraw(isForCopying: any) {
     const [pageX, pageY] = this.pageTranslation;
     const [pageWidth, pageHeight] = this.pageDimensions;
     return this.#drawOutlines.serialize(
@@ -973,7 +991,7 @@ class DrawingEditor extends AnnotationEditor {
   }
 
   /** @inheritdoc */
-  renderAnnotationElement(annotation) {
+  renderAnnotationElement(annotation: any) {
     annotation.updateEdited({
       rect: this.getPDFRect(),
     });

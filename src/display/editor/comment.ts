@@ -13,32 +13,32 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+
 
 import { noContextMenu, stopEvent } from "../display_utils.js";
 
 class Comment {
-  #commentStandaloneButton = null;
+  #commentStandaloneButton: any = null;
 
-  #commentToolbarButton = null;
+  #commentToolbarButton: any = null;
 
   #commentWasFromKeyBoard = false;
 
-  #editor = null;
+  #editor: any = null;
 
-  #initialText = null;
+  #initialText: any = null;
 
-  #richText = null;
+  #richText: any = null;
 
-  #text = null;
+  #text: any = null;
 
-  #date = null;
+  #date: any = null;
 
   #deleted = false;
 
-  #popupPosition = null;
+  #popupPosition: any = null;
 
-  constructor(editor) {
+  constructor(editor: any) {
     this.#editor = editor;
   }
 
@@ -133,7 +133,7 @@ class Comment {
     this.#commentToolbarButton = null;
   }
 
-  setCommentButtonStates({ selected, hasPopup }) {
+  setCommentButtonStates({ selected, hasPopup }: any) {
     if (!this.#commentStandaloneButton) {
       return;
     }
@@ -141,7 +141,7 @@ class Comment {
     this.#commentStandaloneButton.ariaExpanded = hasPopup;
   }
 
-  #render(comment, isStandalone) {
+  #render(comment: any, isStandalone: any) {
     if (!this.#editor._uiManager.hasCommentManager()) {
       return null;
     }
@@ -168,7 +168,7 @@ class Comment {
     if (isStandalone) {
       comment.addEventListener(
         "focusin",
-        e => {
+        (e: any) => {
           this.#editor._focusEventsAllowed = false;
           stopEvent(e);
         },
@@ -179,7 +179,7 @@ class Comment {
       );
       comment.addEventListener(
         "focusout",
-        e => {
+        (e: any) => {
           this.#editor._focusEventsAllowed = true;
           stopEvent(e);
         },
@@ -189,11 +189,11 @@ class Comment {
         }
       );
     }
-    comment.addEventListener("pointerdown", event => event.stopPropagation(), {
+    comment.addEventListener("pointerdown", (event: any) => event.stopPropagation(), {
       signal,
     });
 
-    const onClick = event => {
+    const onClick = (event: any) => {
       event.preventDefault();
       if (comment === this.#commentToolbarButton) {
         this.edit();
@@ -204,7 +204,7 @@ class Comment {
     comment.addEventListener("click", onClick, { capture: true, signal });
     comment.addEventListener(
       "keydown",
-      event => {
+      (event: any) => {
         if (event.target === comment && event.key === "Enter") {
           this.#commentWasFromKeyBoard = true;
           onClick(event);
@@ -237,7 +237,7 @@ class Comment {
     return comment;
   }
 
-  edit(options) {
+  edit(options?: any) {
     const position = this.commentPopupPositionInLayer;
     let posX, posY;
     if (position) {
@@ -323,14 +323,14 @@ class Comment {
    * @param {string|null} data.richText - The rich text content.
    * @param {Date|null} data.date - The original date.
    */
-  restoreData({ text, richText, date }) {
+  restoreData({ text, richText, date }: any) {
     this.#text = text;
     this.#richText = richText;
     this.#date = date;
     this.#deleted = false;
   }
 
-  setInitialText(text, richText = null) {
+  setInitialText(text: any, richText: any = null) {
     this.#initialText = text;
     this.data = text;
     this.#date = null;

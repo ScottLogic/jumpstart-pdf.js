@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { FindState, PDFFindController } from "./pdf_find_controller.js";
 import {
   LinkTarget,

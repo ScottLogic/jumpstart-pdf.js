@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+
 
 import { MathClamp } from "../../../shared/math_clamp.js";
 import { Outline } from "./outline.js";
@@ -21,19 +21,19 @@ import { Util } from "../../../shared/util.js";
 
 class InkDrawOutliner {
   // The last 3 points of the line.
-  #last = new Float64Array(6);
+  #last: any = new Float64Array(6);
 
-  #line;
+  #line: any;
 
-  #lines;
+  #lines: any;
 
-  #rotation;
+  #rotation: any;
 
-  #thickness;
+  #thickness: any;
 
-  #points;
+  #points: any;
 
-  #lastSVGPath = "";
+  #lastSVGPath: any = "";
 
   #lastIndex = 0;
 
@@ -43,7 +43,7 @@ class InkDrawOutliner {
 
   #parentHeight;
 
-  constructor(x, y, parentWidth, parentHeight, rotation, thickness) {
+  constructor(x: any, y: any, parentWidth: any, parentHeight: any, rotation: any, thickness: any) {
     this.#parentWidth = parentWidth;
     this.#parentHeight = parentHeight;
     this.#rotation = rotation;
@@ -57,13 +57,13 @@ class InkDrawOutliner {
     this.#last.set(line, 0);
   }
 
-  updateProperty(name, value) {
+  updateProperty(name: any, value: any) {
     if (name === "stroke-width") {
       this.#thickness = value;
     }
   }
 
-  #normalizePoint(x, y) {
+  #normalizePoint(x: any, y: any) {
     return Outline._normalizePoint(
       x,
       y,
@@ -83,7 +83,7 @@ class InkDrawOutliner {
     return this.#points.length <= 10;
   }
 
-  add(x, y) {
+  add(x: any, y: any) {
     // The point is in canvas coordinates which means that there is no rotation.
     // It's the same as parent coordinates.
     [x, y] = this.#normalizePoint(x, y);
@@ -126,7 +126,7 @@ class InkDrawOutliner {
     };
   }
 
-  end(x, y) {
+  end(x: any, y: any) {
     const change = this.add(x, y);
     if (change) {
       return change;
@@ -142,7 +142,7 @@ class InkDrawOutliner {
     return null;
   }
 
-  startNew(x, y, parentWidth, parentHeight, rotation) {
+  startNew(x: any, y: any, parentWidth: any, parentHeight: any, rotation: any) {
     this.#parentWidth = parentWidth;
     this.#parentHeight = parentHeight;
     this.#rotation = rotation;
@@ -151,7 +151,7 @@ class InkDrawOutliner {
 
     const line = (this.#line = [NaN, NaN, NaN, NaN, x, y]);
     this.#points = [x, y];
-    const last = this.#lines.at(-1);
+    const last: any = this.#lines.at(-1);
     if (last) {
       last.line = new Float32Array(last.line);
       last.points = new Float32Array(last.points);
@@ -168,7 +168,7 @@ class InkDrawOutliner {
     return this.#lines.at(-1);
   }
 
-  setLastElement(element) {
+  setLastElement(element: any) {
     if (!this.#lines) {
       return this.#outlines.setLastElement(element);
     }
@@ -245,8 +245,8 @@ class InkDrawOutliner {
     return this.#lastSVGPath;
   }
 
-  getOutlines(parentWidth, parentHeight, scale, innerMargin) {
-    const last = this.#lines.at(-1);
+  getOutlines(parentWidth: any, parentHeight: any, scale: any, innerMargin: any) {
+    const last: any = this.#lines.at(-1);
     last.line = new Float32Array(last.line);
     last.points = new Float32Array(last.points);
 
@@ -283,32 +283,32 @@ class InkDrawOutliner {
 }
 
 class InkDrawOutline extends Outline {
-  #bbox;
+  #bbox: any;
 
   #currentRotation = 0;
 
-  #innerMargin;
+  #innerMargin: any;
 
-  #lines;
+  #lines: any;
 
-  #parentWidth;
+  #parentWidth: any;
 
-  #parentHeight;
+  #parentHeight: any;
 
-  #parentScale;
+  #parentScale: any;
 
-  #rotation;
+  #rotation: any;
 
-  #thickness;
+  #thickness: any;
 
   build(
-    lines,
-    parentWidth,
-    parentHeight,
-    parentScale,
-    rotation,
-    thickness,
-    innerMargin
+    lines: any,
+    parentWidth: any,
+    parentHeight: any,
+    parentScale: any,
+    rotation: any,
+    thickness: any,
+    innerMargin: any
   ) {
     this.#parentWidth = parentWidth;
     this.#parentHeight = parentHeight;
@@ -325,7 +325,7 @@ class InkDrawOutline extends Outline {
     return this.#thickness;
   }
 
-  setLastElement(element) {
+  setLastElement(element: any) {
     this.#lines.push(element);
     return {
       path: {
@@ -367,11 +367,11 @@ class InkDrawOutline extends Outline {
     return buffer.join("");
   }
 
-  serialize([pageX, pageY, pageWidth, pageHeight], isForCopying) {
+  serialize([pageX, pageY, pageWidth, pageHeight]: any[], isForCopying: any) {
     const serializedLines = [];
     const serializedPoints = [];
     const [x, y, width, height] = this.#getBBoxWithNoMargin();
-    let tx, ty, sx, sy, x1, y1, x2, y2, rescaleFn;
+    let tx: any, ty: any, sx: any, sy: any, x1: any, y1: any, x2: any, y2: any, rescaleFn: any;
 
     switch (this.#rotation) {
       case 0:
@@ -451,15 +451,15 @@ class InkDrawOutline extends Outline {
   }
 
   static deserialize(
-    pageX,
-    pageY,
-    pageWidth,
-    pageHeight,
-    innerMargin,
-    { paths: { lines, points }, rotation, thickness }
+    pageX: any,
+    pageY: any,
+    pageWidth: any,
+    pageHeight: any,
+    innerMargin: any,
+    { paths: { lines, points }, rotation, thickness }: any
   ) {
     const newLines = [];
-    let tx, ty, sx, sy, rescaleFn;
+    let tx: any, ty: any, sx: any, sy: any, rescaleFn: any;
     switch (rotation) {
       case 0:
         rescaleFn = Outline._rescale;
@@ -539,14 +539,14 @@ class InkDrawOutline extends Outline {
     for (let i = 0, ii = lines.length; i < ii; i++) {
       newLines.push({
         line: rescaleFn(
-          lines[i].map(x => x ?? NaN),
+          lines[i].map((x: any) => x ?? NaN),
           tx,
           ty,
           sx,
           sy
         ),
         points: rescaleFn(
-          points[i].map(x => x ?? NaN),
+          points[i].map((x: any) => x ?? NaN),
           tx,
           ty,
           sx,
@@ -555,7 +555,7 @@ class InkDrawOutline extends Outline {
       });
     }
 
-    const outlines = new this.prototype.constructor();
+    const outlines = new (this as any).prototype.constructor();
     outlines.build(
       newLines,
       pageWidth,
@@ -569,7 +569,7 @@ class InkDrawOutline extends Outline {
     return outlines;
   }
 
-  #getMarginComponents(thickness = this.#thickness) {
+  #getMarginComponents(thickness: any = this.#thickness) {
     const margin = this.#innerMargin + (thickness / 2) * this.#parentScale;
     return this.#rotation % 180 === 0
       ? [margin / this.#parentWidth, margin / this.#parentHeight]
@@ -600,7 +600,7 @@ class InkDrawOutline extends Outline {
       if (line.length <= 12) {
         // We've only one or two points => no bezier curve.
         for (let i = 4, ii = line.length; i < ii; i += 6) {
-          Util.pointBoundingBox(line[i], line[i + 1], bbox);
+          Util.pointBoundingBox(line[i], line[i + 1], bbox as any);
         }
         continue;
       }
@@ -608,7 +608,7 @@ class InkDrawOutline extends Outline {
         lastY = line[5];
       for (let i = 6, ii = line.length; i < ii; i += 6) {
         const [c1x, c1y, c2x, c2y, x, y] = line.subarray(i, i + 6);
-        Util.bezierBoundingBox(lastX, lastY, c1x, c1y, c2x, c2y, x, y, bbox);
+        Util.bezierBoundingBox(lastX, lastY, c1x, c1y, c2x, c2y, x, y, bbox as any);
         lastX = x;
         lastY = y;
       }
@@ -628,14 +628,14 @@ class InkDrawOutline extends Outline {
     return this.#bbox;
   }
 
-  updateProperty(name, value) {
+  updateProperty(name: any, value: any) {
     if (name === "stroke-width") {
       return this.#updateThickness(value);
     }
     return null;
   }
 
-  #updateThickness(thickness) {
+  #updateThickness(thickness: any) {
     const [oldMarginX, oldMarginY] = this.#getMarginComponents();
     this.#thickness = thickness;
     const [newMarginX, newMarginY] = this.#getMarginComponents();
@@ -652,7 +652,7 @@ class InkDrawOutline extends Outline {
     return bbox;
   }
 
-  updateParentDimensions([width, height], scale) {
+  updateParentDimensions([width, height]: any[], scale: any) {
     const [oldMarginX, oldMarginY] = this.#getMarginComponents();
     this.#parentWidth = width;
     this.#parentHeight = height;
@@ -670,7 +670,7 @@ class InkDrawOutline extends Outline {
     return bbox;
   }
 
-  updateRotation(rotation) {
+  updateRotation(rotation: any) {
     this.#currentRotation = rotation;
     return {
       path: {
@@ -726,7 +726,7 @@ class InkDrawOutline extends Outline {
     return `matrix(${a} ${b} ${c} ${d} ${Outline.svgRound(e)} ${Outline.svgRound(f)})`;
   }
 
-  getPathResizingSVGProperties([newX, newY, newWidth, newHeight]) {
+  getPathResizingSVGProperties([newX, newY, newWidth, newHeight]: any[]) {
     const [marginX, marginY] = this.#getMarginComponents();
     const [x, y, width, height] = this.#bbox;
 
@@ -771,7 +771,7 @@ class InkDrawOutline extends Outline {
     };
   }
 
-  getPathResizedSVGProperties([newX, newY, newWidth, newHeight]) {
+  getPathResizedSVGProperties([newX, newY, newWidth, newHeight]: any[]) {
     const [marginX, marginY] = this.#getMarginComponents();
     const bbox = this.#bbox;
     const [x, y, width, height] = bbox;
@@ -836,7 +836,7 @@ class InkDrawOutline extends Outline {
     };
   }
 
-  getPathTranslatedSVGProperties([newX, newY], parentDimensions) {
+  getPathTranslatedSVGProperties([newX, newY]: any[], parentDimensions: any) {
     const [newParentWidth, newParentHeight] = parentDimensions;
     const bbox = this.#bbox;
     const tx = newX - bbox[0];

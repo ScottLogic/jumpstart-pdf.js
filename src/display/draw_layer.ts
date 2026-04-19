@@ -13,10 +13,15 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { DOMSVGFactory } from "./svg_factory.js";
 import { shadow } from "../shared/util.js";
+
+type DrawProperties = {
+  root?: Record<string, string | null>;
+  bbox?: [number, number, number, number];
+  rootClass?: Record<string, boolean>;
+  path?: Record<string, string | null>;
+} | null | undefined;
 
 /**
  * Manage the SVGs drawn on top of the page canvas.
@@ -24,15 +29,15 @@ import { shadow } from "../shared/util.js";
  * be able to use mix-blend-mode for some of them.
  */
 class DrawLayer {
-  #parent = null;
+  #parent: Element | null = null;
 
-  #mapping = new Map();
+  #mapping = new Map<number, Element>();
 
-  #toUpdate = new Map();
+  #toUpdate = new Map<number, Element>();
 
   static #id = 0;
 
-  setParent(parent) {
+  setParent(parent: Element) {
     if (!this.#parent) {
       this.#parent = parent;
       return;
@@ -53,8 +58,8 @@ class DrawLayer {
     return shadow(this, "_svgFactory", new DOMSVGFactory());
   }
 
-  static #setBox(element, [x, y, width, height]) {
-    const { style } = element;
+  static #setBox(element: Element, [x, y, width, height]: [number, number, number, number]) {
+    const { style } = element as HTMLElement;
     style.top = `${100 * y}%`;
     style.left = `${100 * x}%`;
     style.width = `${100 * width}%`;
@@ -63,13 +68,13 @@ class DrawLayer {
 
   #createSVG() {
     const svg = DrawLayer._svgFactory.create(1, 1, /* skipDimensions = */ true);
-    this.#parent.append(svg);
-    svg.setAttribute("aria-hidden", true);
+    this.#parent!.append(svg);
+    svg.setAttribute("aria-hidden", "true");
 
     return svg;
   }
 
-  #createClipPath(defs, pathId) {
+  #createClipPath(defs: Element, pathId: string): string {
     const clipPath = DrawLayer._svgFactory.createElement("clipPath");
     defs.append(clipPath);
     const clipPathId = `clip_${pathId}`;
@@ -83,7 +88,7 @@ class DrawLayer {
     return clipPathId;
   }
 
-  #updateProperties(element, properties) {
+  #updateProperties(element: Element, properties: Record<string, string | null>) {
     for (const [key, value] of Object.entries(properties)) {
       if (value === null) {
         element.removeAttribute(key);
@@ -93,7 +98,7 @@ class DrawLayer {
     }
   }
 
-  draw(properties, isPathUpdatable = false, hasClip = false) {
+  draw(properties: DrawProperties, isPathUpdatable = false, hasClip = false): { id: number; clipPathId: string } {
     const id = DrawLayer.#id++;
     const root = this.#createSVG();
 
@@ -122,7 +127,7 @@ class DrawLayer {
     return { id, clipPathId: `url(#${clipPathId})` };
   }
 
-  drawOutline(properties, mustRemoveSelfIntersections) {
+  drawOutline(properties: DrawProperties, mustRemoveSelfIntersections: boolean): number {
     // We cannot draw the outline directly in the SVG for highlights because
     // it composes with its parent with mix-blend-mode: multiply.
     // But the outline has a different mix-blend-mode, so we need to draw it in
@@ -164,7 +169,7 @@ class DrawLayer {
     if (maskId) {
       use1.setAttribute("mask", `url(#${maskId})`);
     }
-    const use2 = use1.cloneNode();
+    const use2 = use1.cloneNode() as Element;
     root.append(use2);
     use1.classList.add("mainOutline");
     use2.classList.add("secondaryOutline");
@@ -176,12 +181,12 @@ class DrawLayer {
     return id;
   }
 
-  finalizeDraw(id, properties) {
+  finalizeDraw(id: number, properties: DrawProperties) {
     this.#toUpdate.delete(id);
     this.updateProperties(id, properties);
   }
 
-  updateProperties(elementOrId, properties) {
+  updateProperties(elementOrId: number | Element, properties: DrawProperties) {
     if (!properties) {
       return;
     }
@@ -206,13 +211,13 @@ class DrawLayer {
       }
     }
     if (path) {
-      const defs = element.firstElementChild;
-      const pathElement = defs.firstElementChild;
+      const defs = element.firstElementChild!;
+      const pathElement = defs.firstElementChild!;
       this.#updateProperties(pathElement, path);
     }
   }
 
-  updateParent(id, layer) {
+  updateParent(id: number, layer: DrawLayer) {
     if (layer === this) {
       return;
     }
@@ -220,17 +225,17 @@ class DrawLayer {
     if (!root) {
       return;
     }
-    layer.#parent.append(root);
+    layer.#parent!.append(root);
     this.#mapping.delete(id);
     layer.#mapping.set(id, root);
   }
 
-  remove(id) {
+  remove(id: number) {
     this.#toUpdate.delete(id);
     if (this.#parent === null) {
       return;
     }
-    this.#mapping.get(id).remove();
+    this.#mapping.get(id)!.remove();
     this.#mapping.delete(id);
   }
 

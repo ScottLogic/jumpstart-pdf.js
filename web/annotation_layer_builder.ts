@@ -13,24 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
-/** @typedef {import("../src/display/api").PDFPageProxy} PDFPageProxy */
-
-/** @typedef {import("../src/display/display_utils").PageViewport} PageViewport */
-
-/** @typedef {import("../src/display/annotation_storage").AnnotationStorage} AnnotationStorage */
-
-/** @typedef {import("./struct_tree_layer_builder.js").StructTreeLayerBuilder} StructTreeLayerBuilder */
-
-/** @typedef {import("./text_accessibility.js").TextAccessibilityManager} TextAccessibilityManager */
-
-/** @typedef {import("../src/display/editor/tools.js").AnnotationEditorUIManager} AnnotationEditorUIManager */
-/** @typedef {import("./comment_manager.js").CommentManager} CommentManager */
-/** @typedef {import("./pdf_link_service.js").PDFLinkService} PDFLinkService */
-
-/** @typedef {import("./base_download_manager.js").BaseDownloadManager} BaseDownloadManager */
-
 import {
   AnnotationLayer,
   AnnotationType,
@@ -39,50 +21,32 @@ import {
 } from "pdfjs-lib";
 import { PresentationModeState } from "./ui_utils.js";
 
-/**
- * @typedef {Object} AnnotationLayerBuilderOptions
- * @property {PDFPageProxy} pdfPage
- * @property {AnnotationStorage} [annotationStorage]
- * @property {string} [imageResourcesPath] - Path for image resources, mainly
- *   for annotation icons. Include trailing slash.
- * @property {boolean} renderForms
- * @property {PDFLinkService} linkService
- * @property {BaseDownloadManager} [downloadManager]
- * @property {boolean} [enableComment]
- * @property {boolean} [enableScripting]
- * @property {Promise<boolean>} [hasJSActionsPromise]
- * @property {Promise<Object<string, Array<Object>> | null>}
- *   [fieldObjectsPromise]
- * @property {Map<string, HTMLCanvasElement>} [annotationCanvasMap]
- * @property {TextAccessibilityManager} [accessibilityManager]
- * @property {AnnotationEditorUIManager} [annotationEditorUIManager]
- * @property {function} [onAppend]
- * @property {CommentManager} [commentManager]
- */
-
-/**
- * @typedef {Object} AnnotationLayerBuilderRenderOptions
- * @property {PageViewport} viewport
- * @property {string} [intent] - The default value is "display".
- * @property {StructTreeLayerBuilder} [structTreeLayer]
- */
-
 class AnnotationLayerBuilder {
-  #annotations = null;
+  #annotations: any[] | null = null;
+  #commentManager: any = null;
+  #externalHide: boolean = false;
+  #onAppend: ((div: HTMLDivElement) => void) | null = null;
+  #eventAbortController: AbortController | null = null;
+  #linksInjected: boolean = false;
 
-  #commentManager = null;
+  pdfPage: any;
+  linkService: any;
+  downloadManager: any;
+  imageResourcesPath: string;
+  renderForms: boolean;
+  annotationStorage: any;
+  enableComment: boolean;
+  enableScripting: boolean;
+  _hasJSActionsPromise: Promise<boolean>;
+  _fieldObjectsPromise: Promise<any>;
+  _annotationCanvasMap: any;
+  _accessibilityManager: any;
+  _annotationEditorUIManager: any;
+  annotationLayer: any;
+  div: HTMLDivElement | null;
+  _cancelled: boolean;
+  _eventBus: any;
 
-  #externalHide = false;
-
-  #onAppend = null;
-
-  #eventAbortController = null;
-
-  #linksInjected = false;
-
-  /**
-   * @param {AnnotationLayerBuilderOptions} options
-   */
   constructor({
     pdfPage,
     linkService,
@@ -99,6 +63,22 @@ class AnnotationLayerBuilder {
     accessibilityManager = null,
     annotationEditorUIManager = null,
     onAppend = null,
+  }: {
+    pdfPage: any;
+    linkService: any;
+    downloadManager?: any;
+    annotationStorage?: any;
+    imageResourcesPath?: string;
+    renderForms?: boolean;
+    enableComment?: boolean;
+    commentManager?: any;
+    enableScripting?: boolean;
+    hasJSActionsPromise?: Promise<boolean> | null;
+    fieldObjectsPromise?: Promise<any> | null;
+    annotationCanvasMap?: any;
+    accessibilityManager?: any;
+    annotationEditorUIManager?: any;
+    onAppend?: ((div: HTMLDivElement) => void) | null;
   }) {
     this.pdfPage = pdfPage;
     this.linkService = linkService;
@@ -122,12 +102,11 @@ class AnnotationLayerBuilder {
     this._eventBus = linkService.eventBus;
   }
 
-  /**
-   * @param {AnnotationLayerBuilderRenderOptions} options
-   * @returns {Promise<void>} A promise that is resolved when rendering of the
-   *   annotations is complete.
-   */
-  async render({ viewport, intent = "display", structTreeLayer = null }) {
+  async render({ viewport, intent = "display", structTreeLayer = null }: {
+    viewport: any;
+    intent?: string;
+    structTreeLayer?: any;
+  }): Promise<void> {
     if (this.div) {
       if (this._cancelled || !this.annotationLayer) {
         return;
@@ -185,15 +164,15 @@ class AnnotationLayerBuilder {
 
       this._eventBus?._on(
         "presentationmodechanged",
-        evt => {
-          this.#updatePresentationModeState(evt.state);
+        (evt: unknown) => {
+          this.#updatePresentationModeState((evt as { state: number }).state);
         },
         { signal: this.#eventAbortController.signal }
       );
     }
   }
 
-  #initAnnotationLayer(viewport, structTreeLayer) {
+  #initAnnotationLayer(viewport: any, structTreeLayer: any): void {
     this.annotationLayer = new AnnotationLayer({
       div: this.div,
       accessibilityManager: this._accessibilityManager,
@@ -208,14 +187,14 @@ class AnnotationLayerBuilder {
     });
   }
 
-  cancel() {
+  cancel(): void {
     this._cancelled = true;
 
     this.#eventAbortController?.abort();
     this.#eventAbortController = null;
   }
 
-  hide(internal = false) {
+  hide(internal = false): void {
     this.#externalHide = !internal;
     if (!this.div) {
       return;
@@ -223,16 +202,11 @@ class AnnotationLayerBuilder {
     this.div.hidden = true;
   }
 
-  hasEditableAnnotations() {
+  hasEditableAnnotations(): boolean {
     return !!this.annotationLayer?.hasEditableAnnotations();
   }
 
-  /**
-   * @param {Array<Object>} inferredLinks
-   * @returns {Promise<void>} A promise that is resolved when the inferred links
-   *   are added to the annotation layer.
-   */
-  async injectLinkAnnotations(inferredLinks) {
+  async injectLinkAnnotations(inferredLinks: any[]): Promise<void> {
     if (this.#annotations === null) {
       throw new Error(
         "`render` method must be called before `injectLinkAnnotations`."
@@ -254,11 +228,11 @@ class AnnotationLayerBuilder {
     await this.annotationLayer.addLinkAnnotations(newLinks);
     // Don't show the annotation layer if it was explicitly hidden previously.
     if (!this.#externalHide) {
-      this.div.hidden = false;
+      this.div!.hidden = false;
     }
   }
 
-  #updatePresentationModeState(state) {
+  #updatePresentationModeState(state: number): void {
     if (!this.div) {
       return;
     }
@@ -274,19 +248,20 @@ class AnnotationLayerBuilder {
         return;
     }
     for (const section of this.div.childNodes) {
-      if (section.hasAttribute("data-internal-link")) {
+      const el = section as HTMLElement;
+      if (el.hasAttribute("data-internal-link")) {
         continue;
       }
-      section.inert = disableFormElements;
+      el.inert = disableFormElements;
     }
   }
 
-  #checkInferredLinks(inferredLinks) {
-    function annotationRects(annot) {
+  #checkInferredLinks(inferredLinks: any[]): any[] {
+    function annotationRects(annot: any): number[][] {
       if (!annot.quadPoints) {
         return [annot.rect];
       }
-      const rects = [];
+      const rects: number[][] = [];
       for (let i = 2, ii = annot.quadPoints.length; i < ii; i += 8) {
         const trX = annot.quadPoints[i];
         const trY = annot.quadPoints[i + 1];
@@ -297,8 +272,8 @@ class AnnotationLayerBuilder {
       return rects;
     }
 
-    function intersectAnnotations(annot1, annot2) {
-      const intersections = [];
+    function intersectAnnotations(annot1: any, annot2: any): number[][] {
+      const intersections: number[][] = [];
       const annot1Rects = annotationRects(annot1);
       const annot2Rects = annotationRects(annot2);
       for (const rect1 of annot1Rects) {
@@ -312,7 +287,7 @@ class AnnotationLayerBuilder {
       return intersections;
     }
 
-    function areaRects(rects) {
+    function areaRects(rects: number[][]): number {
       let totalArea = 0;
       for (const rect of rects) {
         totalArea += Math.abs((rect[2] - rect[0]) * (rect[3] - rect[1]));
@@ -321,9 +296,9 @@ class AnnotationLayerBuilder {
     }
 
     return inferredLinks.filter(link => {
-      let linkAreaRects;
+      let linkAreaRects: number | undefined;
 
-      for (const annotation of this.#annotations) {
+      for (const annotation of this.#annotations!) {
         if (
           annotation.annotationType !== AnnotationType.LINK ||
           !annotation.url

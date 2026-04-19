@@ -13,15 +13,17 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
-/** @typedef {import("./pdf_viewer").PDFViewer} PDFViewer */
-
-/** @typedef {import("./pdf_thumbnail_viewer").PDFThumbnailViewer} PDFThumbnailViewer */
-/** @typedef {import("./renderable_view").RenderableView} RenderableView */
-
+import type { RenderableView } from "./renderable_view.js";
 import { RenderingCancelledException } from "pdfjs-lib";
 import { RenderingStates } from "./renderable_view.js";
+
+interface PDFViewerLike {
+  forceRendering(currentlyVisiblePages?: unknown): boolean;
+}
+
+interface PDFThumbnailViewerLike {
+  forceRendering(): boolean;
+}
 
 const CLEANUP_TIMEOUT = 30000;
 
@@ -29,17 +31,17 @@ const CLEANUP_TIMEOUT = 30000;
  * Controls rendering of the views for pages and thumbnails.
  */
 class PDFRenderingQueue {
-  #highestPriorityPage = null;
+  #highestPriorityPage: string | null = null;
 
-  #idleTimeout = null;
+  #idleTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  #pdfThumbnailViewer = null;
+  #pdfThumbnailViewer: PDFThumbnailViewerLike | null = null;
 
-  #pdfViewer = null;
+  #pdfViewer: PDFViewerLike | null = null;
 
   isThumbnailViewEnabled = false;
 
-  onIdle = null;
+  onIdle: (() => void) | null = null;
 
   printing = false;
 
@@ -51,39 +53,26 @@ class PDFRenderingQueue {
     }
   }
 
-  /**
-   * @param {PDFViewer} pdfViewer
-   */
-  setViewer(pdfViewer) {
+  setViewer(pdfViewer: PDFViewerLike): void {
     this.#pdfViewer = pdfViewer;
   }
 
-  /**
-   * @param {PDFThumbnailViewer} pdfThumbnailViewer
-   */
-  setThumbnailViewer(pdfThumbnailViewer) {
+  setThumbnailViewer(pdfThumbnailViewer: PDFThumbnailViewerLike): void {
     this.#pdfThumbnailViewer = pdfThumbnailViewer;
   }
 
-  /**
-   * @param {RenderableView} view
-   * @returns {boolean}
-   */
-  isHighestPriority(view) {
+  isHighestPriority(view: RenderableView): boolean {
     return this.#highestPriorityPage === view.renderingId;
   }
 
-  /**
-   * @param {Object} currentlyVisiblePages
-   */
-  renderHighestPriority(currentlyVisiblePages) {
+  renderHighestPriority(currentlyVisiblePages?: unknown): void {
     if (this.#idleTimeout) {
       clearTimeout(this.#idleTimeout);
       this.#idleTimeout = null;
     }
 
     // Pages have a higher priority than thumbnails, so check them first.
-    if (this.#pdfViewer.forceRendering(currentlyVisiblePages)) {
+    if (this.#pdfViewer!.forceRendering(currentlyVisiblePages)) {
       return;
     }
     // No pages needed rendering, so check thumbnails.
@@ -104,20 +93,18 @@ class PDFRenderingQueue {
     }
   }
 
-  /**
-   * @param {Object} visible
-   * @param {Array} views
-   * @param {boolean} scrolledDown
-   * @param {boolean} [preRenderExtra]
-   * @param {boolean} [ignoreDetailViews]
-   */
   getHighestPriority(
-    visible,
-    views,
-    scrolledDown,
+    visible: {
+      views: Array<{ view: RenderableView }>;
+      first: { id: number };
+      last: { id: number };
+      ids: Set<number>;
+    },
+    views: RenderableView[],
+    scrolledDown: boolean,
     preRenderExtra = false,
     ignoreDetailViews = false
-  ) {
+  ): RenderableView | null {
     /**
      * The state has changed. Figure out which page has the highest priority to
      * render next (if any).
@@ -193,24 +180,17 @@ class PDFRenderingQueue {
    * @param {RenderableView} view
    * @returns {boolean}
    */
-  isViewFinished(view) {
+  isViewFinished(view: RenderableView): boolean {
     return view.renderingState === RenderingStates.FINISHED;
   }
 
-  /**
-   * Render a page or thumbnail view. This calls the appropriate function
-   * based on the views state. If the view is already rendered it will return
-   * `false`.
-   *
-   * @param {RenderableView} view
-   */
-  renderView(view) {
+  renderView(view: RenderableView): boolean {
     switch (view.renderingState) {
       case RenderingStates.FINISHED:
         return false;
       case RenderingStates.PAUSED:
         this.#highestPriorityPage = view.renderingId;
-        view.resume();
+        view.resume?.();
         break;
       case RenderingStates.RUNNING:
         this.#highestPriorityPage = view.renderingId;

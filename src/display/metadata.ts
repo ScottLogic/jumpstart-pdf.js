@@ -13,27 +13,25 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 class Metadata {
-  #map;
+  #map: Map<string, any>;
 
-  #data;
+  #data: string;
 
-  constructor({ parsedData, rawData }) {
+  constructor({ parsedData, rawData }: { parsedData: Map<string, any>; rawData: string }) {
     this.#map = parsedData;
     this.#data = rawData;
   }
 
-  getRaw() {
+  getRaw(): string {
     return this.#data;
   }
 
-  get(name) {
+  get(name: string): any {
     return this.#map.get(name) ?? null;
   }
 
-  [Symbol.iterator]() {
+  [Symbol.iterator](): IterableIterator<[string, any]> {
     return this.#map.entries();
   }
 }

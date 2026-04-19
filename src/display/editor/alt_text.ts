@@ -13,40 +13,40 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+
 
 import { noContextMenu } from "../display_utils.js";
 
 class AltText {
-  #altText = null;
+  #altText: any = null;
 
   #altTextDecorative = false;
 
-  #altTextButton = null;
+  #altTextButton: any = null;
 
-  #altTextButtonLabel = null;
+  #altTextButtonLabel: any = null;
 
-  #altTextTooltip = null;
+  #altTextTooltip: any = null;
 
-  #altTextTooltipTimeout = null;
+  #altTextTooltipTimeout: any = null;
 
   #altTextWasFromKeyBoard = false;
 
-  #badge = null;
+  #badge: any = null;
 
-  #editor = null;
+  #editor: any = null;
 
-  #guessedText = null;
+  #guessedText: any = null;
 
-  #textWithDisclaimer = null;
+  #textWithDisclaimer: any = null;
 
   #useNewAltTextFlow = false;
 
-  static #l10nNewButton = null;
+  static #l10nNewButton: any = null;
 
-  static _l10n = null;
+  static _l10n: any = null;
 
-  constructor(editor) {
+  constructor(editor: any) {
     this.#editor = editor;
     this.#useNewAltTextFlow = editor._uiManager.useNewAltTextFlow;
 
@@ -60,14 +60,14 @@ class AltText {
     });
   }
 
-  static initialize(l10n) {
+  static initialize(l10n: any) {
     AltText._l10n ??= l10n;
   }
 
   async render() {
     const altText = (this.#altTextButton = document.createElement("button"));
     altText.className = "altText";
-    altText.tabIndex = "0";
+    altText.tabIndex = 0;
 
     const label = (this.#altTextButtonLabel = document.createElement("span"));
     altText.append(label);
@@ -86,11 +86,11 @@ class AltText {
 
     const signal = this.#editor._uiManager._signal;
     altText.addEventListener("contextmenu", noContextMenu, { signal });
-    altText.addEventListener("pointerdown", event => event.stopPropagation(), {
+    altText.addEventListener("pointerdown", (event: any) => event.stopPropagation(), {
       signal,
     });
 
-    const onClick = event => {
+    const onClick = (event: any) => {
       event.preventDefault();
       this.#editor._uiManager.editAltText(this.#editor);
       if (this.#useNewAltTextFlow) {
@@ -103,7 +103,7 @@ class AltText {
     altText.addEventListener("click", onClick, { capture: true, signal });
     altText.addEventListener(
       "keydown",
-      event => {
+      (event: any) => {
         if (event.target === altText && event.key === "Enter") {
           this.#altTextWasFromKeyBoard = true;
           onClick(event);
@@ -150,7 +150,7 @@ class AltText {
     return this.#guessedText;
   }
 
-  async setGuessedText(guessedText) {
+  async setGuessedText(guessedText: any) {
     if (this.#altText !== null) {
       // The user provided their own alt text, so we don't want to overwrite it.
       return;
@@ -177,7 +177,7 @@ class AltText {
     this.#badge.classList.toggle("hidden", !visibility);
   }
 
-  serialize(isForCopying) {
+  serialize(isForCopying: any) {
     let altText = this.#altText;
     if (!isForCopying && this.#guessedText === altText) {
       altText = this.#textWithDisclaimer;
@@ -190,7 +190,7 @@ class AltText {
     };
   }
 
-  get data() {
+  get data(): any {
     return {
       altText: this.#altText,
       decorative: this.#altTextDecorative,
@@ -206,7 +206,7 @@ class AltText {
     guessedText,
     textWithDisclaimer,
     cancel = false,
-  }) {
+  }: any) {
     if (guessedText) {
       this.#guessedText = guessedText;
       this.#textWithDisclaimer = textWithDisclaimer;
@@ -276,7 +276,7 @@ class AltText {
       button.setAttribute("data-l10n-id", "pdfjs-editor-alt-text-edit-button");
     }
 
-    let tooltip = this.#altTextTooltip;
+    let tooltip: any = this.#altTextTooltip;
     if (!tooltip) {
       this.#altTextTooltip = tooltip = document.createElement("span");
       tooltip.className = "tooltip";

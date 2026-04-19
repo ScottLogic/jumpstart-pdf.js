@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+
 
 import { AnnotationEditorType, AnnotationPrefix } from "../../shared/util.js";
 import {
@@ -29,23 +29,23 @@ import { StampAnnotationElement } from "../annotation_layer.js";
  * Basic text editor in order to create a FreeTex annotation.
  */
 class StampEditor extends AnnotationEditor {
-  #bitmap = null;
+  #bitmap: any = null;
 
-  #bitmapId = null;
+  #bitmapId: any = null;
 
-  #bitmapPromise = null;
+  #bitmapPromise: any = null;
 
-  #bitmapUrl = null;
+  #bitmapUrl: any = null;
 
-  #bitmapFile = null;
+  #bitmapFile: any = null;
 
   #bitmapFileName = "";
 
-  #canvas = null;
+  #canvas: any = null;
 
   #missingCanvas = false;
 
-  #resizeTimeoutId = null;
+  #resizeTimeoutId: any = null;
 
   #isSvg = false;
 
@@ -55,7 +55,7 @@ class StampEditor extends AnnotationEditor {
 
   static _editorType = AnnotationEditorType.STAMP;
 
-  constructor(params) {
+  constructor(params: any) {
     super({ ...params, name: "stampEditor" });
     this.#bitmapUrl = params.bitmapUrl;
     this.#bitmapFile = params.bitmapFile;
@@ -63,17 +63,17 @@ class StampEditor extends AnnotationEditor {
   }
 
   /** @inheritdoc */
-  static initialize(l10n, uiManager) {
+  static initialize(l10n: any, uiManager: any) {
     AnnotationEditor.initialize(l10n, uiManager);
   }
 
   /** @inheritdoc */
-  static isHandlingMimeForPasting(mime) {
+  static isHandlingMimeForPasting(mime: any) {
     return SupportedImageMimeTypes.includes(mime);
   }
 
   /** @inheritdoc */
-  static paste(item, parent) {
+  static paste(item: any, parent: any) {
     parent.pasteEditor(
       { mode: AnnotationEditorType.STAMP },
       { bitmapFile: item.getAsFile() }
@@ -89,14 +89,14 @@ class StampEditor extends AnnotationEditor {
   }
 
   /** @inheritdoc */
-  get telemetryFinalData() {
+  get telemetryFinalData(): any {
     return {
       type: "stamp",
       hasAltText: !!this.altTextData?.altText,
     };
   }
 
-  static computeTelemetryFinalData(data) {
+  static computeTelemetryFinalData(data: any) {
     const hasAltTextStats = data.get("hasAltText");
     return {
       hasAltText: hasAltTextStats.get(true) ?? 0,
@@ -104,7 +104,7 @@ class StampEditor extends AnnotationEditor {
     };
   }
 
-  #getBitmapFetched(data, fromId = false) {
+  #getBitmapFetched(data: any, fromId = false) {
     if (!data) {
       this.remove();
       return;
@@ -157,7 +157,7 @@ class StampEditor extends AnnotationEditor {
     this.div.focus();
   }
 
-  async mlGuessAltText(imageData = null, updateAltTextData = true) {
+  async mlGuessAltText(imageData: any = null, updateAltTextData = true) {
     if (this.hasAltTextData()) {
       return null;
     }
@@ -206,7 +206,7 @@ class StampEditor extends AnnotationEditor {
       this._uiManager.enableWaiting(true);
       this._uiManager.imageManager
         .getFromId(this.#bitmapId)
-        .then(data => this.#getBitmapFetched(data, /* fromId = */ true))
+        .then((data: any) => this.#getBitmapFetched(data, /* fromId = */ true))
         .finally(() => this.#getBitmapDone());
       return;
     }
@@ -217,7 +217,7 @@ class StampEditor extends AnnotationEditor {
       this._uiManager.enableWaiting(true);
       this.#bitmapPromise = this._uiManager.imageManager
         .getFromUrl(url)
-        .then(data => this.#getBitmapFetched(data))
+        .then((data: any) => this.#getBitmapFetched(data))
         .finally(() => this.#getBitmapDone());
       return;
     }
@@ -228,7 +228,7 @@ class StampEditor extends AnnotationEditor {
       this._uiManager.enableWaiting(true);
       this.#bitmapPromise = this._uiManager.imageManager
         .getFromFile(file)
-        .then(data => this.#getBitmapFetched(data))
+        .then((data: any) => this.#getBitmapFetched(data))
         .finally(() => this.#getBitmapDone());
       return;
     }
@@ -242,7 +242,7 @@ class StampEditor extends AnnotationEditor {
     input.type = "file";
     input.accept = SupportedImageMimeTypes.join(",");
     const signal = this._uiManager._signal;
-    this.#bitmapPromise = new Promise(resolve => {
+    this.#bitmapPromise = new Promise<void>(resolve => {
       input.addEventListener(
         "change",
         async () => {
@@ -322,7 +322,7 @@ class StampEditor extends AnnotationEditor {
   }
 
   /** @inheritdoc */
-  onceAdded(focus) {
+  onceAdded(focus: any) {
     this._isDraggable = true;
     if (focus) {
       this.div.focus();
@@ -385,7 +385,7 @@ class StampEditor extends AnnotationEditor {
     return this.div;
   }
 
-  setCanvas(annotationElementId, canvas) {
+  setCanvas(annotationElementId: any, canvas: any) {
     const { id: bitmapId, bitmap } = this._uiManager.imageManager.getFromCanvas(
       annotationElementId,
       canvas
@@ -489,7 +489,7 @@ class StampEditor extends AnnotationEditor {
     }
   }
 
-  copyCanvas(maxDataDimension, maxPreviewDimension, createImageData = false) {
+  copyCanvas(maxDataDimension: any, maxPreviewDimension: any, createImageData = false) {
     if (!maxDataDimension) {
       // TODO: get this value from Firefox
       //   (https://bugzilla.mozilla.org/show_bug.cgi?id=1908184)
@@ -527,7 +527,7 @@ class StampEditor extends AnnotationEditor {
       }
 
       const ctx = canvas.getContext("2d");
-      ctx.filter = this._uiManager.hcmFilter;
+      ctx!.filter = this._uiManager.hcmFilter;
 
       // Add a checkerboard pattern as a background in case the image has some
       // transparency.
@@ -544,19 +544,19 @@ class StampEditor extends AnnotationEditor {
       const boxDimHeight = boxDim * outputScale.sy;
       const pattern = new OffscreenCanvas(boxDimWidth * 2, boxDimHeight * 2);
       const patternCtx = pattern.getContext("2d");
-      patternCtx.fillStyle = white;
-      patternCtx.fillRect(0, 0, boxDimWidth * 2, boxDimHeight * 2);
-      patternCtx.fillStyle = black;
-      patternCtx.fillRect(0, 0, boxDimWidth, boxDimHeight);
-      patternCtx.fillRect(boxDimWidth, boxDimHeight, boxDimWidth, boxDimHeight);
-      ctx.fillStyle = ctx.createPattern(pattern, "repeat");
-      ctx.fillRect(0, 0, scaledWidth, scaledHeight);
-      ctx.drawImage(
-        bitmap,
+      patternCtx!.fillStyle = white;
+      patternCtx!.fillRect(0, 0, boxDimWidth * 2, boxDimHeight * 2);
+      patternCtx!.fillStyle = black;
+      patternCtx!.fillRect(0, 0, boxDimWidth, boxDimHeight);
+      patternCtx!.fillRect(boxDimWidth, boxDimHeight, boxDimWidth, boxDimHeight);
+      ctx!.fillStyle = ctx!.createPattern(pattern, "repeat") as any;
+      ctx!.fillRect(0, 0, scaledWidth, scaledHeight);
+      ctx!.drawImage(
+        bitmap as any,
         0,
         0,
-        bitmap.width,
-        bitmap.height,
+        bitmap!.width,
+        bitmap!.height,
         0,
         0,
         scaledWidth,
@@ -569,11 +569,11 @@ class StampEditor extends AnnotationEditor {
       let dataWidth, dataHeight;
       if (
         outputScale.symmetric &&
-        bitmap.width < maxDataDimension &&
-        bitmap.height < maxDataDimension
+        bitmap!.width < maxDataDimension &&
+        bitmap!.height < maxDataDimension
       ) {
-        dataWidth = bitmap.width;
-        dataHeight = bitmap.height;
+        dataWidth = bitmap!.width;
+        dataHeight = bitmap!.height;
       } else {
         bitmap = this.#bitmap;
         if (bitmapWidth > maxDataDimension || bitmapHeight > maxDataDimension) {
@@ -594,12 +594,12 @@ class StampEditor extends AnnotationEditor {
       const offscreenCtx = offscreen.getContext("2d", {
         willReadFrequently: true,
       });
-      offscreenCtx.drawImage(
-        bitmap,
+      offscreenCtx!.drawImage(
+        bitmap as any,
         0,
         0,
-        bitmap.width,
-        bitmap.height,
+        bitmap!.width,
+        bitmap!.height,
         0,
         0,
         dataWidth,
@@ -608,14 +608,14 @@ class StampEditor extends AnnotationEditor {
       imageData = {
         width: dataWidth,
         height: dataHeight,
-        data: offscreenCtx.getImageData(0, 0, dataWidth, dataHeight).data,
+        data: offscreenCtx!.getImageData(0, 0, dataWidth, dataHeight).data,
       };
     }
 
     return { canvas, width, height, imageData };
   }
 
-  #scaleBitmap(width, height) {
+  #scaleBitmap(width: any, height: any) {
     const { width: bitmapWidth, height: bitmapHeight } = this.#bitmap;
 
     let newWidth = bitmapWidth;
@@ -643,8 +643,8 @@ class StampEditor extends AnnotationEditor {
 
       const offscreen = new OffscreenCanvas(newWidth, newHeight);
       const ctx = offscreen.getContext("2d");
-      ctx.drawImage(
-        bitmap,
+      ctx!.drawImage(
+        bitmap as any,
         0,
         0,
         prevWidth,
@@ -683,13 +683,13 @@ class StampEditor extends AnnotationEditor {
       : this.#scaleBitmap(scaledWidth, scaledHeight);
 
     const ctx = canvas.getContext("2d");
-    ctx.filter = this._uiManager.hcmFilter;
-    ctx.drawImage(
-      bitmap,
+    ctx!.filter = this._uiManager.hcmFilter;
+    ctx!.drawImage(
+      bitmap!,
       0,
       0,
-      bitmap.width,
-      bitmap.height,
+      bitmap!.width,
+      bitmap!.height,
       0,
       0,
       scaledWidth,
@@ -697,7 +697,7 @@ class StampEditor extends AnnotationEditor {
     );
   }
 
-  #serializeBitmap(toUrl) {
+  #serializeBitmap(toUrl: any) {
     if (toUrl) {
       if (this.#isSvg) {
         const url = this._uiManager.imageManager.getSvgUrl(this.#bitmapId);
@@ -710,7 +710,7 @@ class StampEditor extends AnnotationEditor {
       const canvas = document.createElement("canvas");
       ({ width: canvas.width, height: canvas.height } = this.#bitmap);
       const ctx = canvas.getContext("2d");
-      ctx.drawImage(this.#bitmap, 0, 0);
+      ctx!.drawImage(this.#bitmap as any, 0, 0);
 
       return canvas.toDataURL();
     }
@@ -727,12 +727,12 @@ class StampEditor extends AnnotationEditor {
       );
       const offscreen = new OffscreenCanvas(width, height);
       const ctx = offscreen.getContext("2d");
-      ctx.drawImage(
-        this.#bitmap,
+      ctx!.drawImage(
+        this.#bitmap as any,
         0,
         0,
-        this.#bitmap.width,
-        this.#bitmap.height,
+        this.#bitmap!.width,
+        this.#bitmap!.height,
         0,
         0,
         width,
@@ -745,7 +745,7 @@ class StampEditor extends AnnotationEditor {
   }
 
   /** @inheritdoc */
-  static async deserialize(data, parent, uiManager) {
+  static async deserialize(data: any, parent: any, uiManager: any) {
     let initialData = null;
     let missingCanvas = false;
     if (data instanceof StampAnnotationElement) {
@@ -766,10 +766,10 @@ class StampEditor extends AnnotationEditor {
           page: { pageNumber },
         },
         canvas,
-      } = data;
+      } = data as any;
       let bitmapId, bitmap;
       if (canvas) {
-        delete data.canvas;
+        delete (data as any).canvas;
         ({ id: bitmapId, bitmap } = uiManager.imageManager.getFromCanvas(
           container.id,
           canvas
@@ -777,7 +777,7 @@ class StampEditor extends AnnotationEditor {
         canvas.remove();
       } else {
         missingCanvas = true;
-        data._hasNoCanvas = true;
+        (data as any)._hasNoCanvas = true;
       }
 
       // When switching to edit mode, we wait for the structure tree to be
@@ -845,7 +845,7 @@ class StampEditor extends AnnotationEditor {
   }
 
   /** @inheritdoc */
-  serialize(isForCopying = false, context = null) {
+  serialize(isForCopying = false, context: any = null) {
     if (this.isEmpty()) {
       return null;
     }
@@ -895,21 +895,21 @@ class StampEditor extends AnnotationEditor {
       return serialized;
     }
 
-    context.stamps ||= new Map();
+    (context as any).stamps ||= new Map();
     const area = this.#isSvg
       ? (serialized.rect[2] - serialized.rect[0]) *
         (serialized.rect[3] - serialized.rect[1])
       : null;
-    if (!context.stamps.has(this.#bitmapId)) {
+    if (!(context as any).stamps.has(this.#bitmapId)) {
       // We don't want to have multiple copies of the same bitmap in the
       // annotationMap, hence we only add the bitmap the first time we meet it.
-      context.stamps.set(this.#bitmapId, { area, serialized });
+      (context as any).stamps.set(this.#bitmapId, { area, serialized });
       serialized.bitmap = this.#serializeBitmap(/* toUrl = */ false);
     } else if (this.#isSvg) {
       // If we have multiple copies of the same svg but with different sizes,
       // then we want to keep the biggest one.
-      const prevData = context.stamps.get(this.#bitmapId);
-      if (area > prevData.area) {
+      const prevData = (context as any).stamps.get(this.#bitmapId);
+      if (area! > prevData.area) {
         prevData.area = area;
         prevData.serialized.bitmap.close();
         prevData.serialized.bitmap = this.#serializeBitmap(/* toUrl = */ false);
@@ -918,7 +918,7 @@ class StampEditor extends AnnotationEditor {
     return serialized;
   }
 
-  #hasElementChanged(serialized) {
+  #hasElementChanged(serialized: any) {
     const {
       pageIndex,
       accessibilityData: { altText },
@@ -939,7 +939,7 @@ class StampEditor extends AnnotationEditor {
   }
 
   /** @inheritdoc */
-  renderAnnotationElement(annotation) {
+  renderAnnotationElement(annotation: any) {
     if (this.deleted) {
       annotation.hide();
       return null;

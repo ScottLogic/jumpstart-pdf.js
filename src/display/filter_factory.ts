@@ -13,42 +13,40 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { getRGB, isDataScheme, SVG_NS } from "./display_utils.js";
 import { unreachable, updateUrlHash, Util, warn } from "../shared/util.js";
 
 class BaseFilterFactory {
   constructor() {
     if (
-      (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) &&
+      (typeof PDFJSDev === "undefined" || PDFJSDev!.test("TESTING")) &&
       this.constructor === BaseFilterFactory
     ) {
       unreachable("Cannot initialize BaseFilterFactory.");
     }
   }
 
-  addFilter(maps) {
+  addFilter(maps: any): string {
     return "none";
   }
 
-  addHCMFilter(fgColor, bgColor) {
+  addHCMFilter(fgColor: any, bgColor: any): string {
     return "none";
   }
 
-  addAlphaFilter(map) {
+  addAlphaFilter(map: any): string {
     return "none";
   }
 
-  addLuminosityFilter(map) {
+  addLuminosityFilter(map: any): string {
     return "none";
   }
 
-  addHighlightHCMFilter(filterName, fgColor, bgColor, newFgColor, newBgColor) {
+  addHighlightHCMFilter(filterName: string, fgColor: any, bgColor: any, newFgColor: any, newBgColor: any): string {
     return "none";
   }
 
-  destroy(keepHCM = false) {}
+  destroy(keepHCM: boolean = false): void {}
 }
 
 /**
@@ -60,49 +58,55 @@ class BaseFilterFactory {
  * an image without the need to apply them on the pixel arrays: the renderer
  * does the magic for us.
  */
+type HCMCacheEntry = {
+  key: string;
+  url: string;
+  filter: Element | null;
+};
+
 class DOMFilterFactory extends BaseFilterFactory {
-  #baseUrl;
+  #baseUrl: string | undefined;
 
-  #_cache;
+  #_cache: Map<any, string> | undefined | null;
 
-  #_defs;
+  #_defs: Element | undefined | null;
 
-  #docId;
+  #docId: string;
 
-  #document;
+  #document: Document;
 
-  #_hcmCache;
+  #_hcmCache: Map<string, HCMCacheEntry> | undefined | null;
 
-  #id = 0;
+  #id: number = 0;
 
-  constructor({ docId, ownerDocument = globalThis.document }) {
+  constructor({ docId, ownerDocument = globalThis.document }: { docId: string; ownerDocument?: Document }) {
     super();
     this.#docId = docId;
     this.#document = ownerDocument;
   }
 
-  get #cache() {
+  get #cache(): Map<any, string> {
     return (this.#_cache ||= new Map());
   }
 
-  get #hcmCache() {
+  get #hcmCache(): Map<string, HCMCacheEntry> {
     return (this.#_hcmCache ||= new Map());
   }
 
-  get #defs() {
+  get #defs(): Element {
     if (!this.#_defs) {
       const div = this.#document.createElement("div");
       const { style } = div;
       style.visibility = "hidden";
       style.contain = "strict";
-      style.width = style.height = 0;
+      style.width = style.height = "0";
       style.position = "absolute";
-      style.top = style.left = 0;
-      style.zIndex = -1;
+      style.top = style.left = "0";
+      style.zIndex = "-1";
 
       const svg = this.#document.createElementNS(SVG_NS, "svg");
-      svg.setAttribute("width", 0);
-      svg.setAttribute("height", 0);
+      svg.setAttribute("width", "0");
+      svg.setAttribute("height", "0");
       this.#_defs = this.#document.createElementNS(SVG_NS, "defs");
       div.append(svg);
       svg.append(this.#_defs);
@@ -111,7 +115,7 @@ class DOMFilterFactory extends BaseFilterFactory {
     return this.#_defs;
   }
 
-  #createTables(maps) {
+  #createTables(maps: any[]): [string, string, string] {
     if (maps.length === 1) {
       const mapR = maps[0];
       const buffer = new Array(256);
@@ -135,7 +139,7 @@ class DOMFilterFactory extends BaseFilterFactory {
     return [bufferR.join(","), bufferG.join(","), bufferB.join(",")];
   }
 
-  #createUrl(id) {
+  #createUrl(id: string): string {
     if (this.#baseUrl === undefined) {
       // Unless a `<base>`-element is present a relative URL should work.
       this.#baseUrl = "";
@@ -152,7 +156,7 @@ class DOMFilterFactory extends BaseFilterFactory {
     return `url(${this.#baseUrl}#${id})`;
   }
 
-  addFilter(maps) {
+  override addFilter(maps: any): string {
     if (!maps) {
       return "none";
     }
@@ -187,7 +191,7 @@ class DOMFilterFactory extends BaseFilterFactory {
     return url;
   }
 
-  addHCMFilter(fgColor, bgColor) {
+  override addHCMFilter(fgColor: any, bgColor: any): string {
     const key = `${fgColor}-${bgColor}`;
     const filterName = "base";
     let info = this.#hcmCache.get(filterName);
@@ -214,10 +218,10 @@ class DOMFilterFactory extends BaseFilterFactory {
     }
 
     const fgRGB = this.#getRGB(fgColor);
-    fgColor = Util.makeHexColor(...fgRGB);
+    fgColor = Util.makeHexColor(...(fgRGB as [number, number, number]));
     const bgRGB = this.#getRGB(bgColor);
-    bgColor = Util.makeHexColor(...bgRGB);
-    this.#defs.style.color = "";
+    bgColor = Util.makeHexColor(...(bgRGB as [number, number, number]));
+    (this.#defs as SVGElement).style.color = "";
 
     if (
       (fgColor === "#000000" && bgColor === "#ffffff") ||
@@ -247,7 +251,7 @@ class DOMFilterFactory extends BaseFilterFactory {
     this.#addTransferMapConversion(table, table, table, filter);
     this.#addGrayConversion(filter);
 
-    const getSteps = (c, n) => {
+    const getSteps = (c: number, n: number) => {
       const start = fgRGB[c] / 255;
       const end = bgRGB[c] / 255;
       const arr = new Array(n + 1);
@@ -267,7 +271,7 @@ class DOMFilterFactory extends BaseFilterFactory {
     return info.url;
   }
 
-  addAlphaFilter(map) {
+  override addAlphaFilter(map: any): string {
     // When a page is zoomed the page is re-drawn but the maps are likely
     // the same.
     let value = this.#cache.get(map);
@@ -295,7 +299,7 @@ class DOMFilterFactory extends BaseFilterFactory {
     return url;
   }
 
-  addLuminosityFilter(map) {
+  override addLuminosityFilter(map: any): string {
     // When a page is zoomed the page is re-drawn but the maps are likely
     // the same.
     let value = this.#cache.get(map || "luminosity");
@@ -325,13 +329,13 @@ class DOMFilterFactory extends BaseFilterFactory {
     const filter = this.#createFilter(id);
     this.#addLuminosityConversion(filter);
     if (map) {
-      this.#addTransferMapAlphaConversion(tableA, filter);
+      this.#addTransferMapAlphaConversion(tableA!, filter);
     }
 
     return url;
   }
 
-  addHighlightHCMFilter(filterName, fgColor, bgColor, newFgColor, newBgColor) {
+  override addHighlightHCMFilter(filterName: string, fgColor: any, bgColor: any, newFgColor: any, newBgColor: any): string {
     const key = `${fgColor}-${bgColor}-${newFgColor}-${newBgColor}`;
     let info = this.#hcmCache.get(filterName);
     if (info?.key === key) {
@@ -374,7 +378,7 @@ class DOMFilterFactory extends BaseFilterFactory {
         newFgRGB,
       ];
     }
-    this.#defs.style.color = "";
+    (this.#defs as SVGElement).style.color = "";
 
     // Now we can create the filters to highlight some canvas parts.
     // The colors in the pdf will almost be Canvas and CanvasText, hence we
@@ -389,7 +393,7 @@ class DOMFilterFactory extends BaseFilterFactory {
     //   then we are enable to map the red component on the new red components
     //   which can be different.
 
-    const getSteps = (fg, bg, n) => {
+    const getSteps = (fg: number, bg: number, n: number) => {
       const arr = new Array(256);
       const step = (bgGray - fgGray) / n;
       const newStart = fg / 255;
@@ -424,11 +428,11 @@ class DOMFilterFactory extends BaseFilterFactory {
     return info.url;
   }
 
-  destroy(keepHCM = false) {
+  override destroy(keepHCM: boolean = false): void {
     if (keepHCM && this.#_hcmCache?.size) {
       return;
     }
-    this.#_defs?.parentNode.parentNode.remove();
+    (this.#_defs?.parentNode as Element | null)?.parentElement?.remove();
     this.#_defs = null;
 
     this.#_cache?.clear();
@@ -440,7 +444,7 @@ class DOMFilterFactory extends BaseFilterFactory {
     this.#id = 0;
   }
 
-  #addLuminosityConversion(filter) {
+  #addLuminosityConversion(filter: Element): void {
     const feColorMatrix = this.#document.createElementNS(
       SVG_NS,
       "feColorMatrix"
@@ -453,7 +457,7 @@ class DOMFilterFactory extends BaseFilterFactory {
     filter.append(feColorMatrix);
   }
 
-  #addGrayConversion(filter) {
+  #addGrayConversion(filter: Element): void {
     const feColorMatrix = this.#document.createElementNS(
       SVG_NS,
       "feColorMatrix"
@@ -466,7 +470,7 @@ class DOMFilterFactory extends BaseFilterFactory {
     filter.append(feColorMatrix);
   }
 
-  #createFilter(id) {
+  #createFilter(id: string): Element {
     const filter = this.#document.createElementNS(SVG_NS, "filter");
     filter.setAttribute("color-interpolation-filters", "sRGB");
     filter.setAttribute("id", id);
@@ -475,14 +479,14 @@ class DOMFilterFactory extends BaseFilterFactory {
     return filter;
   }
 
-  #appendFeFunc(feComponentTransfer, func, table) {
+  #appendFeFunc(feComponentTransfer: Element, func: string, table: string): void {
     const feFunc = this.#document.createElementNS(SVG_NS, func);
     feFunc.setAttribute("type", "discrete");
     feFunc.setAttribute("tableValues", table);
     feComponentTransfer.append(feFunc);
   }
 
-  #addTransferMapConversion(rTable, gTable, bTable, filter) {
+  #addTransferMapConversion(rTable: string, gTable: string, bTable: string, filter: Element): void {
     const feComponentTransfer = this.#document.createElementNS(
       SVG_NS,
       "feComponentTransfer"
@@ -493,7 +497,7 @@ class DOMFilterFactory extends BaseFilterFactory {
     this.#appendFeFunc(feComponentTransfer, "feFuncB", bTable);
   }
 
-  #addTransferMapAlphaConversion(aTable, filter) {
+  #addTransferMapAlphaConversion(aTable: string, filter: Element): void {
     const feComponentTransfer = this.#document.createElementNS(
       SVG_NS,
       "feComponentTransfer"
@@ -502,8 +506,8 @@ class DOMFilterFactory extends BaseFilterFactory {
     this.#appendFeFunc(feComponentTransfer, "feFuncA", aTable);
   }
 
-  #getRGB(color) {
-    this.#defs.style.color = color;
+  #getRGB(color: string): number[] {
+    (this.#defs as SVGElement).style.color = color;
     return getRGB(getComputedStyle(this.#defs).getPropertyValue("color"));
   }
 }

@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 /** @typedef {import("./annotation_storage").AnnotationStorage} AnnotationStorage */
 /** @typedef {import("./display_utils").PageViewport} PageViewport */
 
@@ -33,7 +31,7 @@ import { XfaText } from "./xfa_text.js";
  */
 
 class XfaLayer {
-  static setupStorage(html, id, element, storage, intent) {
+  static setupStorage(html: Element, id: string, element: any, storage: any, intent: string) {
     const storedData = storage.getValue(id, { value: null });
     switch (element.name) {
       case "textarea":
@@ -43,8 +41,8 @@ class XfaLayer {
         if (intent === "print") {
           break;
         }
-        html.addEventListener("input", event => {
-          storage.setValue(id, { value: event.target.value });
+        html.addEventListener("input", (event: Event) => {
+          storage.setValue(id, { value: (event.target as HTMLTextAreaElement).value });
         });
         break;
       case "input":
@@ -53,7 +51,7 @@ class XfaLayer {
           element.attributes.type === "checkbox"
         ) {
           if (storedData.value === element.attributes.xfaOn) {
-            html.setAttribute("checked", true);
+            html.setAttribute("checked", "true");
           } else if (storedData.value === element.attributes.xfaOff) {
             // The checked attribute may have been set when opening the file,
             // unset through the UI and we're here because of printing.
@@ -62,28 +60,29 @@ class XfaLayer {
           if (intent === "print") {
             break;
           }
-          html.addEventListener("change", event => {
+          html.addEventListener("change", (event: Event) => {
+            const target = event.target as HTMLInputElement;
             storage.setValue(id, {
-              value: event.target.checked
-                ? event.target.getAttribute("xfaOn")
-                : event.target.getAttribute("xfaOff"),
+              value: target.checked
+                ? target.getAttribute("xfaOn")
+                : target.getAttribute("xfaOff"),
             });
           });
         } else {
           if (storedData.value !== null) {
-            html.setAttribute("value", storedData.value);
+            html.setAttribute("value", String(storedData.value));
           }
           if (intent === "print") {
             break;
           }
-          html.addEventListener("input", event => {
-            storage.setValue(id, { value: event.target.value });
+          html.addEventListener("input", (event: Event) => {
+            storage.setValue(id, { value: (event.target as HTMLInputElement).value });
           });
         }
         break;
       case "select":
         if (storedData.value !== null) {
-          html.setAttribute("value", storedData.value);
+          html.setAttribute("value", String(storedData.value));
           for (const option of element.children) {
             if (option.attributes.value === storedData.value) {
               option.attributes.selected = true;
@@ -92,8 +91,8 @@ class XfaLayer {
             }
           }
         }
-        html.addEventListener("input", event => {
-          const options = event.target.options;
+        html.addEventListener("input", (event: Event) => {
+          const options = (event.target as HTMLSelectElement).options;
           const value =
             options.selectedIndex === -1
               ? ""
@@ -104,7 +103,7 @@ class XfaLayer {
     }
   }
 
-  static setAttributes({ html, element, storage = null, intent, linkService }) {
+  static setAttributes({ html, element, storage = null, intent, linkService }: { html: Element; element: any; storage?: any; intent: string; linkService: any }) {
     const { attributes } = element;
     const isHTMLAnchorElement = html instanceof HTMLAnchorElement;
 
@@ -113,7 +112,7 @@ class XfaLayer {
       // already displayed.
       attributes.name = `${attributes.name}-${intent}`;
     }
-    for (const [key, value] of Object.entries(attributes)) {
+    for (const [key, value] of Object.entries(attributes) as [string, any][]) {
       if (value === null || value === undefined) {
         continue;
       }
@@ -133,7 +132,7 @@ class XfaLayer {
           html.setAttribute("data-element-id", value);
           break;
         case "style":
-          Object.assign(html.style, value);
+          Object.assign((html as HTMLElement).style, value);
           break;
         case "textContent":
           html.textContent = value;
@@ -155,7 +154,7 @@ class XfaLayer {
 
     // Set the value after the others to be sure to overwrite any other values.
     if (storage && attributes.dataId) {
-      this.setupStorage(html, attributes.dataId, element, storage);
+      this.setupStorage(html, attributes.dataId, element, storage, intent);
     }
   }
 
@@ -164,7 +163,7 @@ class XfaLayer {
    *
    * @param {XfaLayerParameters} parameters
    */
-  static render(parameters) {
+  static render(parameters: any) {
     const storage = parameters.annotationStorage;
     const linkService = parameters.linkService;
     const root = parameters.xfaHtml;
@@ -212,13 +211,13 @@ class XfaLayer {
     const stack = [[root, -1, rootHtml]];
 
     while (stack.length > 0) {
-      const [parent, i, html] = stack.at(-1);
+      const [parent, i, html] = stack.at(-1)!;
       if (i + 1 === parent.children.length) {
         stack.pop();
         continue;
       }
 
-      const child = parent.children[++stack.at(-1)[1]];
+      const child = parent.children[++stack.at(-1)![1]];
       if (child === null) {
         continue;
       }
@@ -276,7 +275,7 @@ class XfaLayer {
     for (const el of rootDiv.querySelectorAll(
       ".xfaNonInteractive input, .xfaNonInteractive textarea"
     )) {
-      el.setAttribute("readOnly", true);
+      el.setAttribute("readOnly", "true");
     }
 
     return {
@@ -289,7 +288,7 @@ class XfaLayer {
    *
    * @param {XfaLayerParameters} parameters
    */
-  static update(parameters) {
+  static update(parameters: any) {
     const transform = `matrix(${parameters.viewport.transform.join(",")})`;
     parameters.div.style.transform = transform;
     parameters.div.hidden = false;

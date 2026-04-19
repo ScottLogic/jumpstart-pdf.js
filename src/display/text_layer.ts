@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 /** @typedef {import("./display_utils").PageViewport} PageViewport */
 /** @typedef {import("./api").TextContent} TextContent */
 /** @typedef {import("./text_layer_images").TextLayerImages} TextLayerImages */
@@ -52,59 +50,81 @@ import { OutputScale, setLayerDimensions } from "./display_utils.js";
 const MAX_TEXT_DIVS_TO_RENDER = 100000;
 const DEFAULT_FONT_SIZE = 30;
 
-class TextLayer {
-  #capability = Promise.withResolvers();
+type TextDivProperties = {
+  angle: number;
+  canvasWidth: number;
+  hasText: boolean;
+  hasEOL: boolean;
+  fontSize: number;
+};
 
-  #container = null;
+class TextLayer {
+  #capability = Promise.withResolvers<void>();
+
+  #container: Element | null = null;
 
   #disableProcessItems = false;
 
-  #fontInspectorEnabled = !!globalThis.FontInspector?.enabled;
+  #fontInspectorEnabled = !!(globalThis as any).FontInspector?.enabled;
 
-  #imagesHandler = null;
+  #imagesHandler: any = null;
 
-  #lang = null;
+  #lang: string | null = null;
 
-  #layoutTextParams = null;
+  #layoutTextParams: {
+    div: HTMLSpanElement | null;
+    properties: TextDivProperties | null;
+    ctx: CanvasRenderingContext2D | null;
+  } | null = null;
 
   #pageHeight = 0;
 
   #pageWidth = 0;
 
-  #reader = null;
+  #reader: ReadableStreamDefaultReader | null = null;
 
-  #rootContainer = null;
+  #rootContainer: Element | null = null;
 
   #rotation = 0;
 
   #scale = 0;
 
-  #styleCache = Object.create(null);
+  #styleCache: Record<string, any> | null = Object.create(null);
 
-  #textContentItemsStr = [];
+  #textContentItemsStr: string[] = [];
 
-  #textContentSource = null;
+  #textContentSource: ReadableStream | null = null;
 
-  #textDivs = [];
+  #textDivs: HTMLElement[] = [];
 
-  #textDivProperties = new WeakMap();
+  #textDivProperties = new WeakMap<HTMLElement, TextDivProperties>();
 
-  #transform = null;
+  #transform: number[] | null = null;
 
-  static #ascentCache = new Map();
+  static #ascentCache = new Map<string, number>();
 
-  static #canvasContexts = new Map();
+  static #canvasContexts = new Map<string, CanvasRenderingContext2D>();
 
-  static #canvasCtxFonts = new WeakMap();
+  static #canvasCtxFonts = new WeakMap<CanvasRenderingContext2D, { size: number; family: string }>();
 
-  static #minFontSize = null;
+  static #minFontSize: number | null = null;
 
-  static #pendingTextLayers = new Set();
+  static #pendingTextLayers = new Set<TextLayer>();
 
   /**
    * @param {TextLayerParameters} options
    */
-  constructor({ textContentSource, images, container, viewport }) {
+  constructor({
+    textContentSource,
+    images = null,
+    container,
+    viewport,
+  }: {
+    textContentSource: ReadableStream | any;
+    images?: any;
+    container: Element;
+    viewport: any;
+  }) {
     if (textContentSource instanceof ReadableStream) {
       this.#textContentSource = textContentSource;
     } else if (
@@ -137,7 +157,7 @@ class TextLayer {
     this.#pageHeight = pageHeight;
 
     TextLayer.#ensureMinFontSizeComputed();
-    container.style.setProperty("--min-font-size", TextLayer.#minFontSize);
+    (container as HTMLElement).style.setProperty("--min-font-size", String(TextLayer.#minFontSize));
 
     setLayerDimensions(container, viewport);
 
@@ -191,22 +211,22 @@ class TextLayer {
    */
   render() {
     if (this.#imagesHandler) {
-      this.#container.append(this.#imagesHandler.render());
+      this.#container!.append(this.#imagesHandler.render());
     }
 
     const pump = () => {
-      this.#reader.read().then(({ value, done }) => {
+      this.#reader!.read().then(({ value, done }: { value: any; done: boolean }) => {
         if (done) {
           this.#capability.resolve();
           return;
         }
         this.#lang ??= value.lang;
-        Object.assign(this.#styleCache, value.styles);
+        Object.assign(this.#styleCache!, value.styles);
         this.#processItems(value.items);
         pump();
       }, this.#capability.reject);
     };
-    this.#reader = this.#textContentSource.getReader();
+    this.#reader = this.#textContentSource!.getReader();
     TextLayer.#pendingTextLayers.add(this);
     pump();
 
@@ -218,27 +238,37 @@ class TextLayer {
    * @param {TextLayerUpdateParameters} options
    * @returns {undefined}
    */
-  update({ viewport, onBefore = null }) {
+  update({
+    viewport,
+    onBefore = null,
+  }: {
+    viewport: any;
+    onBefore?: (() => void) | null;
+  }) {
     const scale = viewport.scale * OutputScale.pixelRatio;
     const rotation = viewport.rotation;
 
     if (rotation !== this.#rotation) {
       onBefore?.();
       this.#rotation = rotation;
-      setLayerDimensions(this.#rootContainer, { rotation });
+      setLayerDimensions(this.#rootContainer!, { rotation });
     }
 
     if (scale !== this.#scale) {
       onBefore?.();
       this.#scale = scale;
-      const params = {
+      const params: {
+        div: HTMLSpanElement | null;
+        properties: TextDivProperties | null;
+        ctx: CanvasRenderingContext2D | null;
+      } = {
         div: null,
         properties: null,
         ctx: TextLayer.#getCtx(this.#lang),
       };
       for (const div of this.#textDivs) {
-        params.properties = this.#textDivProperties.get(div);
-        params.div = div;
+        params.properties = this.#textDivProperties.get(div) ?? null;
+        params.div = div as HTMLSpanElement;
         this.#layout(params);
       }
     }
@@ -277,11 +307,11 @@ class TextLayer {
     return this.#textContentItemsStr;
   }
 
-  #processItems(items) {
+  #processItems(items: any[]) {
     if (this.#disableProcessItems) {
       return;
     }
-    this.#layoutTextParams.ctx ??= TextLayer.#getCtx(this.#lang);
+    this.#layoutTextParams!.ctx ??= TextLayer.#getCtx(this.#lang);
 
     const textDivs = this.#textDivs,
       textContentItemsStr = this.#textContentItemsStr;
@@ -308,11 +338,11 @@ class TextLayer {
             this.#container.setAttribute("id", `${item.id}`);
           }
           if (item.tag === "Artifact") {
-            this.#container.ariaHidden = true;
+            this.#container.ariaHidden = "true";
           }
-          parent.append(this.#container);
+          parent!.append(this.#container);
         } else if (item.type === "endMarkedContent") {
-          this.#container = this.#container.parentNode;
+          this.#container = this.#container!.parentNode as Element;
         }
         continue;
       }
@@ -321,7 +351,7 @@ class TextLayer {
     }
   }
 
-  #appendText(geom) {
+  #appendText(geom: any) {
     // Initialize all used properties to keep the caches monomorphic.
     const textDiv = document.createElement("span");
     const textDivProperties = {
@@ -333,9 +363,9 @@ class TextLayer {
     };
     this.#textDivs.push(textDiv);
 
-    const tx = Util.transform(this.#transform, geom.transform);
+    const tx = Util.transform(this.#transform!, geom.transform);
     let angle = Math.atan2(tx[1], tx[0]);
-    const style = this.#styleCache[geom.fontName];
+    const style = this.#styleCache![geom.fontName];
     if (style.vertical) {
       angle += Math.PI / 2;
     }
@@ -409,38 +439,42 @@ class TextLayer {
     this.#textDivProperties.set(textDiv, textDivProperties);
 
     // Finally, layout and append the text to the DOM.
-    this.#layoutTextParams.div = textDiv;
-    this.#layoutTextParams.properties = textDivProperties;
-    this.#layout(this.#layoutTextParams);
+    this.#layoutTextParams!.div = textDiv;
+    this.#layoutTextParams!.properties = textDivProperties;
+    this.#layout(this.#layoutTextParams!);
 
     if (textDivProperties.hasText) {
-      this.#container.append(textDiv);
+      this.#container!.append(textDiv);
     }
     if (textDivProperties.hasEOL) {
       const br = document.createElement("br");
       br.setAttribute("role", "presentation");
-      this.#container.append(br);
+      this.#container!.append(br);
     }
   }
 
-  #layout(params) {
+  #layout(params: {
+    div: HTMLSpanElement | null;
+    properties: TextDivProperties | null;
+    ctx: CanvasRenderingContext2D | null;
+  }) {
     const { div, properties, ctx } = params;
-    const { style } = div;
+    const { style } = div!;
 
-    if (properties.canvasWidth !== 0 && properties.hasText) {
+    if (properties!.canvasWidth !== 0 && properties!.hasText) {
       const { fontFamily } = style;
-      const { canvasWidth, fontSize } = properties;
+      const { canvasWidth, fontSize } = properties!;
 
-      TextLayer.#ensureCtxFont(ctx, fontSize * this.#scale, fontFamily);
+      TextLayer.#ensureCtxFont(ctx!, fontSize * this.#scale, fontFamily);
       // Only measure the width for multi-char text divs, see `appendText`.
-      const { width } = ctx.measureText(div.textContent);
+      const { width } = ctx!.measureText(div!.textContent!);
 
       if (width > 0) {
-        style.setProperty("--scale-x", (canvasWidth * this.#scale) / width);
+        style.setProperty("--scale-x", String((canvasWidth * this.#scale) / width));
       }
     }
-    if (properties.angle !== 0) {
-      style.setProperty("--rotate", `${properties.angle}deg`);
+    if (properties!.angle !== 0) {
+      style.setProperty("--rotate", `${properties!.angle}deg`);
     }
   }
 
@@ -460,8 +494,9 @@ class TextLayer {
     this.#canvasContexts.clear();
   }
 
-  static #getCtx(lang = null) {
-    let ctx = this.#canvasContexts.get((lang ||= ""));
+  static #getCtx(lang: string | null = null): CanvasRenderingContext2D {
+    const normalizedLang = lang || "";
+    let ctx = this.#canvasContexts.get(normalizedLang);
     if (!ctx) {
       // We don't use an OffscreenCanvas here because we use serif/sans serif
       // fonts with it and they depends on the locale.
@@ -475,13 +510,13 @@ class TextLayer {
       // OffscreenCanvas.
       const canvas = document.createElement("canvas");
       canvas.className = "hiddenCanvasElement";
-      canvas.lang = lang;
+      canvas.lang = normalizedLang;
       document.body.append(canvas);
       ctx = canvas.getContext("2d", {
         alpha: false,
         willReadFrequently: true,
-      });
-      this.#canvasContexts.set(lang, ctx);
+      })!;
+      this.#canvasContexts.set(normalizedLang, ctx);
 
       // Also, initialize state for the `#ensureCtxFont` method.
       this.#canvasCtxFonts.set(ctx, { size: 0, family: "" });
@@ -489,8 +524,8 @@ class TextLayer {
     return ctx;
   }
 
-  static #ensureCtxFont(ctx, size, family) {
-    const cached = this.#canvasCtxFonts.get(ctx);
+  static #ensureCtxFont(ctx: CanvasRenderingContext2D, size: number, family: string) {
+    const cached = this.#canvasCtxFonts.get(ctx)!;
     if (size === cached.size && family === cached.family) {
       return; // The font is already set.
     }
@@ -507,8 +542,8 @@ class TextLayer {
       return;
     }
     const div = document.createElement("div");
-    div.style.opacity = 0;
-    div.style.lineHeight = 1;
+    div.style.opacity = "0";
+    div.style.lineHeight = "1";
     div.style.fontSize = "1px";
     div.style.position = "absolute";
     div.textContent = "X";
@@ -520,7 +555,7 @@ class TextLayer {
     div.remove();
   }
 
-  static #getAscent(fontFamily, style, lang) {
+  static #getAscent(fontFamily: string, style: any, lang: string | null) {
     const cachedAscent = this.#ascentCache.get(fontFamily);
     if (cachedAscent) {
       return cachedAscent;

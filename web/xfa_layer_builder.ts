@@ -13,40 +13,26 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
-/** @typedef {import("../src/display/api").PDFPageProxy} PDFPageProxy */
-
-/** @typedef {import("../src/display/annotation_storage").AnnotationStorage} AnnotationStorage */
-
-/** @typedef {import("../src/display/display_utils").PageViewport} PageViewport */
-/** @typedef {import("./pdf_link_service.js").PDFLinkService} PDFLinkService */
-
 import { XfaLayer } from "pdfjs-lib";
 
-/**
- * @typedef {Object} XfaLayerBuilderOptions
- * @property {PDFPageProxy} pdfPage
- * @property {AnnotationStorage} [annotationStorage]
- * @property {PDFLinkService} linkService
- * @property {Object} [xfaHtml]
- */
-
-/**
- * @typedef {Object} XfaLayerBuilderRenderOptions
- * @property {PageViewport} viewport
- * @property {string} [intent] - The default value is "display".
- */
-
 class XfaLayerBuilder {
-  /**
-   * @param {XfaLayerBuilderOptions} options
-   */
+  pdfPage: any;
+  annotationStorage: any;
+  linkService: any;
+  xfaHtml: any;
+  div: HTMLDivElement | null;
+  _cancelled: boolean;
+
   constructor({
     pdfPage,
     annotationStorage = null,
     linkService,
     xfaHtml = null,
+  }: {
+    pdfPage: any;
+    annotationStorage?: any;
+    linkService: any;
+    xfaHtml?: any;
   }) {
     this.pdfPage = pdfPage;
     this.annotationStorage = annotationStorage;
@@ -57,13 +43,7 @@ class XfaLayerBuilder {
     this._cancelled = false;
   }
 
-  /**
-   * @param {XfaLayerBuilderRenderOptions} viewport
-   * @returns {Promise<Object | void>} A promise that is resolved when rendering
-   *   of the XFA layer is complete. The first rendering will return an object
-   *   with a `textDivs` property that can be used with the TextHighlighter.
-   */
-  async render({ viewport, intent = "display" }) {
+  async render({ viewport, intent = "display" }: { viewport: any; intent?: string }): Promise<any> {
     if (intent === "print") {
       const parameters = {
         viewport: viewport.clone({ dontFlip: true }),
@@ -106,11 +86,11 @@ class XfaLayerBuilder {
     return XfaLayer.render(parameters);
   }
 
-  cancel() {
+  cancel(): void {
     this._cancelled = true;
   }
 
-  hide() {
+  hide(): void {
     if (!this.div) {
       return;
     }

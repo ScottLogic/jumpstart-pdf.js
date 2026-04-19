@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { FeatureTest, Util } from "../shared/util.js";
 import { MathClamp } from "../shared/math_clamp.js";
 
@@ -22,7 +20,19 @@ const FORCED_DEPENDENCY_LABEL = "__forcedDependency";
 
 const { floor, ceil } = Math;
 
-function expandBBox(array, index, minX, minY, maxX, maxY) {
+type DebugMetadataEntry = {
+  dependencies: Set<number>;
+  isRenderingOperation: boolean;
+};
+
+function expandBBox(
+  array: Uint8ClampedArray,
+  index: number,
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number
+): void {
   array[index * 4 + 0] = Math.min(array[index * 4 + 0], minX);
   array[index * 4 + 1] = Math.min(array[index * 4 + 1], minY);
   array[index * 4 + 2] = Math.max(array[index * 4 + 2], maxX);
@@ -34,11 +44,11 @@ function expandBBox(array, index, minX, minY, maxX, maxY) {
 const EMPTY_BBOX = new Uint32Array(new Uint8Array([255, 255, 0, 0]).buffer)[0];
 
 class BBoxReader {
-  #bboxes;
+  #bboxes: Uint32Array;
 
-  #coords;
+  #coords: Uint8ClampedArray;
 
-  constructor(bboxes, coords) {
+  constructor(bboxes: Uint32Array, coords: Uint8ClampedArray) {
     this.#bboxes = bboxes;
     this.#coords = coords;
   }
@@ -47,30 +57,33 @@ class BBoxReader {
     return this.#bboxes.length;
   }
 
-  isEmpty(i) {
+  isEmpty(i: number) {
     return this.#bboxes[i] === EMPTY_BBOX;
   }
 
-  minX(i) {
+  minX(i: number) {
     return this.#coords[i * 4 + 0] / 256;
   }
 
-  minY(i) {
+  minY(i: number) {
     return this.#coords[i * 4 + 1] / 256;
   }
 
-  maxX(i) {
+  maxX(i: number) {
     return (this.#coords[i * 4 + 2] + 1) / 256;
   }
 
-  maxY(i) {
+  maxY(i: number) {
     return (this.#coords[i * 4 + 3] + 1) / 256;
   }
 }
 
-const ensureDebugMetadata = (map, key) =>
+const ensureDebugMetadata = (
+  map: Map<number, DebugMetadataEntry> | undefined,
+  key: number
+): DebugMetadataEntry | undefined =>
   map?.getOrInsertComputed(key, () => ({
-    dependencies: new Set(),
+    dependencies: new Set<number>(),
     isRenderingOperation: false,
   }));
 
@@ -78,41 +91,43 @@ const ensureDebugMetadata = (map, key) =>
 // CanvasNestedDependencyTracker must all have the same interface.
 
 class CanvasBBoxTracker {
-  #baseTransformStack = [[1, 0, 0, 1, 0, 0]];
+  #baseTransformStack: number[][] = [[1, 0, 0, 1, 0, 0]];
 
-  #clipBox = [-Infinity, -Infinity, Infinity, Infinity];
+  // Typed as `any` because save/restore uses prototype-chain trick:
+  // this.#clipBox = { __proto__: this.#clipBox }
+  #clipBox: any = [-Infinity, -Infinity, Infinity, Infinity];
 
   // Float32Array<minX, minY, maxX, maxY>
   #pendingBBox = new Float64Array([Infinity, Infinity, -Infinity, -Infinity]);
 
   _pendingBBoxIdx = -1;
 
-  #canvasWidth;
+  #canvasWidth!: number;
 
-  #canvasHeight;
+  #canvasHeight!: number;
 
   // Uint8ClampedArray<minX, minY, maxX, maxY>
-  #bboxesCoords;
+  #bboxesCoords!: Uint8ClampedArray;
 
-  #bboxes;
+  #bboxes!: Uint32Array;
 
-  _savesStack = [];
+  _savesStack: number[] = [];
 
-  _markedContentStack = [];
+  _markedContentStack: number[] = [];
 
-  constructor(canvas, operationsCount) {
+  constructor(canvas: HTMLCanvasElement, operationsCount: number) {
     this.#canvasWidth = canvas.width;
     this.#canvasHeight = canvas.height;
     this.#initializeBBoxes(operationsCount);
   }
 
-  growOperationsCount(operationsCount) {
+  growOperationsCount(operationsCount: number) {
     if (operationsCount >= this.#bboxes.length) {
       this.#initializeBBoxes(operationsCount, this.#bboxes);
     }
   }
 
-  #initializeBBoxes(operationsCount, oldBBoxes) {
+  #initializeBBoxes(operationsCount: number, oldBBoxes?: Uint32Array): void {
     const buffer = new ArrayBuffer(operationsCount * 4);
     this.#bboxesCoords = new Uint8ClampedArray(buffer);
     this.#bboxes = new Uint32Array(buffer);
@@ -124,17 +139,20 @@ class CanvasBBoxTracker {
     }
   }
 
-  get clipBox() {
+  get clipBox(): number[] {
     return this.#clipBox;
   }
 
-  save(opIdx) {
+  save(opIdx: number) {
     this.#clipBox = { __proto__: this.#clipBox };
     this._savesStack.push(opIdx);
     return this;
   }
 
-  restore(opIdx, onSavePopped) {
+  restore(
+    opIdx: number,
+    onSavePopped?: ((lastSave: number, opIdx: number) => void) | null
+  ) {
     const previous = Object.getPrototypeOf(this.#clipBox);
     if (previous === null) {
       // Sometimes we call more .restore() than .save(), for
@@ -154,7 +172,10 @@ class CanvasBBoxTracker {
   /**
    * @param {number} idx
    */
-  recordOpenMarker(idx) {
+  recordOpenMarker(
+    idx: number,
+    _onSavePopped?: ((lastSave: number, opIdx: number) => void) | null
+  ) {
     this._savesStack.push(idx);
     return this;
   }
@@ -166,7 +187,10 @@ class CanvasBBoxTracker {
     return this._savesStack.at(-1);
   }
 
-  recordCloseMarker(opIdx, onSavePopped) {
+  recordCloseMarker(
+    opIdx: number,
+    onSavePopped?: ((lastSave: number, opIdx: number) => void) | null
+  ) {
     const lastSave = this._savesStack.pop();
     if (lastSave !== undefined) {
       onSavePopped?.(lastSave, opIdx);
@@ -177,12 +201,15 @@ class CanvasBBoxTracker {
 
   // Marked content needs a separate stack from save/restore, because they
   // form two independent trees.
-  beginMarkedContent(opIdx) {
+  beginMarkedContent(opIdx: number) {
     this._markedContentStack.push(opIdx);
     return this;
   }
 
-  endMarkedContent(opIdx, onSavePopped) {
+  endMarkedContent(
+    opIdx: number,
+    onSavePopped?: ((lastSave: number, opIdx: number) => void) | null
+  ) {
     const lastSave = this._markedContentStack.pop();
     if (lastSave !== undefined) {
       onSavePopped?.(lastSave, opIdx);
@@ -191,10 +218,10 @@ class CanvasBBoxTracker {
     return this;
   }
 
-  pushBaseTransform(ctx) {
+  pushBaseTransform(ctx: CanvasRenderingContext2D) {
     this.#baseTransformStack.push(
       Util.multiplyByDOMMatrix(
-        this.#baseTransformStack.at(-1),
+        this.#baseTransformStack.at(-1)!,
         ctx.getTransform()
       )
     );
@@ -208,7 +235,7 @@ class CanvasBBoxTracker {
     return this;
   }
 
-  resetBBox(idx) {
+  resetBBox(idx: number) {
     if (this._pendingBBoxIdx !== idx) {
       this._pendingBBoxIdx = idx;
       this.#pendingBBox[0] = Infinity;
@@ -219,9 +246,16 @@ class CanvasBBoxTracker {
     return this;
   }
 
-  recordClipBox(idx, ctx, minX, maxX, minY, maxY) {
+  recordClipBox(
+    idx: number,
+    ctx: CanvasRenderingContext2D,
+    minX: number,
+    maxX: number,
+    minY: number,
+    maxY: number
+  ) {
     const transform = Util.multiplyByDOMMatrix(
-      this.#baseTransformStack.at(-1),
+      this.#baseTransformStack.at(-1)!,
       ctx.getTransform()
     );
     const clipBox = [Infinity, Infinity, -Infinity, -Infinity];
@@ -239,21 +273,28 @@ class CanvasBBoxTracker {
     return this;
   }
 
-  recordBBox(idx, ctx, minX, maxX, minY, maxY) {
+  recordBBox(
+    idx: number,
+    ctx: CanvasRenderingContext2D,
+    minX: number,
+    maxX: number,
+    minY: number,
+    maxY: number
+  ) {
     const clipBox = this.#clipBox;
     if (clipBox[0] === Infinity) {
       return this;
     }
 
     const transform = Util.multiplyByDOMMatrix(
-      this.#baseTransformStack.at(-1),
+      this.#baseTransformStack.at(-1)!,
       ctx.getTransform()
     );
     if (clipBox[0] === -Infinity) {
       Util.axialAlignedBoundingBox(
         [minX, minY, maxX, maxY],
         transform,
-        this.#pendingBBox
+        this.#pendingBBox as unknown as number[]
       );
       return this;
     }
@@ -268,7 +309,7 @@ class CanvasBBoxTracker {
     return this;
   }
 
-  recordFullPageBBox(idx) {
+  recordFullPageBBox(_idx: number) {
     this.#pendingBBox[0] = Math.max(0, this.#clipBox[0]);
     this.#pendingBBox[1] = Math.max(0, this.#clipBox[1]);
     this.#pendingBBox[2] = Math.min(this.#canvasWidth, this.#clipBox[2]);
@@ -279,7 +320,11 @@ class CanvasBBoxTracker {
   /**
    * @param {number} idx
    */
-  recordOperation(idx, preserve = false, dependencyLists) {
+  recordOperation(
+    idx: number,
+    preserve = false,
+    dependencyLists?: Iterable<number>[]
+  ) {
     if (this._pendingBBoxIdx !== idx) {
       return this;
     }
@@ -307,7 +352,7 @@ class CanvasBBoxTracker {
     return this;
   }
 
-  bboxToClipBoxDropOperation(idx) {
+  bboxToClipBoxDropOperation(idx: number) {
     if (this._pendingBBoxIdx === idx) {
       this._pendingBBoxIdx = -1;
 
@@ -323,35 +368,39 @@ class CanvasBBoxTracker {
     return new BBoxReader(this.#bboxes, this.#bboxesCoords);
   }
 
-  takeDebugMetadata() {
+  takeDebugMetadata(): never {
     throw new Error("Unreachable");
   }
 
-  recordSimpleData(name, idx) {
+  recordSimpleData(_name: string, _idx: number) {
     return this;
   }
 
-  recordIncrementalData(name, idx) {
+  recordIncrementalData(_name: string, _idx: number) {
     return this;
   }
 
-  resetIncrementalData(name, idx) {
+  resetIncrementalData(_name: string, _idx: number) {
     return this;
   }
 
-  recordNamedData(name, idx) {
+  recordNamedData(_name: string, _idx: number) {
     return this;
   }
 
-  recordSimpleDataFromNamed(name, depName, fallbackIdx) {
+  recordSimpleDataFromNamed(
+    _name: string,
+    _depName: string,
+    _fallbackIdx: number
+  ) {
     return this;
   }
 
-  recordFutureForcedDependency(name, idx) {
+  recordFutureForcedDependency(_name: string, _idx: number) {
     return this;
   }
 
-  inheritSimpleDataAsFutureForcedDependencies(names) {
+  inheritSimpleDataAsFutureForcedDependencies(_names: string[]) {
     return this;
   }
 
@@ -359,23 +408,31 @@ class CanvasBBoxTracker {
     return this;
   }
 
-  recordCharacterBBox(idx, ctx, font, scale = 1, x = 0, y = 0, getMeasure) {
+  recordCharacterBBox(
+    _idx: number,
+    _ctx: CanvasRenderingContext2D,
+    _font: any,
+    _scale = 1,
+    _x = 0,
+    _y = 0,
+    _getMeasure?: (() => TextMetrics) | null
+  ) {
     return this;
   }
 
-  getSimpleIndex(dependencyName) {
+  getSimpleIndex(_dependencyName: string): number | undefined {
     return undefined;
   }
 
-  recordDependencies(idx, dependencyNames) {
+  recordDependencies(_idx: number, _dependencyNames: string[]) {
     return this;
   }
 
-  recordNamedDependency(idx, name) {
+  recordNamedDependency(_idx: number, _name: string) {
     return this;
   }
 
-  recordShowTextOperation(idx, preserve = false) {
+  recordShowTextOperation(_idx: number, _preserve = false) {
     return this;
   }
 }
@@ -395,11 +452,12 @@ class CanvasBBoxTracker {
  * typeof FORCED_DEPENDENCY_LABEL} InternalIncrementalDependency
  */
 class CanvasDependencyTracker {
-  /** @type {Record<SimpleDependency, number>} */
-  #simple = { __proto__: null };
+  // `any` used because save/restore uses prototype-chain trick:
+  // this.#simple = { __proto__: this.#simple }
+  #simple: any = { __proto__: null };
 
-  /** @type {Record<InternalIncrementalDependency , number[]>} */
-  #incremental = {
+  // `any` for same reason; entries are arrays that inherit via __proto__.
+  #incremental: any = {
     __proto__: null,
     transform: [],
     moveText: [],
@@ -407,24 +465,29 @@ class CanvasDependencyTracker {
     [FORCED_DEPENDENCY_LABEL]: [],
   };
 
-  #namedDependencies = new Map();
+  #namedDependencies = new Map<string, number>();
 
-  #pendingDependencies = new Set();
+  #pendingDependencies = new Set<number>();
 
-  #fontBBoxTrustworthy = new Map();
+  #fontBBoxTrustworthy = new Map<any, boolean>();
 
-  #debugMetadata;
+  #debugMetadata: Map<number, DebugMetadataEntry> | undefined;
 
-  #recordDebugMetadataDepenencyAfterRestore;
+  #recordDebugMetadataDepenencyAfterRestore:
+    | ((lastSave: number, opIdx: number) => void)
+    | undefined;
 
-  #bboxTracker;
+  #bboxTracker: CanvasBBoxTracker;
 
-  constructor(bboxTracker, recordDebugMetadata = false) {
+  constructor(bboxTracker: CanvasBBoxTracker, recordDebugMetadata = false) {
     this.#bboxTracker = bboxTracker;
     if (recordDebugMetadata) {
       this.#debugMetadata = new Map();
-      this.#recordDebugMetadataDepenencyAfterRestore = (lastSave, opIdx) => {
-        ensureDebugMetadata(this.#debugMetadata, opIdx).dependencies.add(
+      this.#recordDebugMetadataDepenencyAfterRestore = (
+        lastSave: number,
+        opIdx: number
+      ) => {
+        ensureDebugMetadata(this.#debugMetadata, opIdx)!.dependencies.add(
           lastSave
         );
       };
@@ -435,11 +498,11 @@ class CanvasDependencyTracker {
     return this.#bboxTracker.clipBox;
   }
 
-  growOperationsCount(operationsCount) {
+  growOperationsCount(operationsCount: number) {
     this.#bboxTracker.growOperationsCount(operationsCount);
   }
 
-  save(opIdx) {
+  save(opIdx: number) {
     this.#simple = { __proto__: this.#simple };
     this.#incremental = {
       __proto__: this.#incremental,
@@ -455,7 +518,7 @@ class CanvasDependencyTracker {
     return this;
   }
 
-  restore(opIdx) {
+  restore(opIdx: number) {
     this.#bboxTracker.restore(
       opIdx,
       this.#recordDebugMetadataDepenencyAfterRestore
@@ -473,7 +536,7 @@ class CanvasDependencyTracker {
     return this;
   }
 
-  recordOpenMarker(opIdx) {
+  recordOpenMarker(opIdx: number) {
     this.#bboxTracker.recordOpenMarker(
       opIdx,
       this.#recordDebugMetadataDepenencyAfterRestore
@@ -485,7 +548,7 @@ class CanvasDependencyTracker {
     return this.#bboxTracker.getOpenMarker();
   }
 
-  recordCloseMarker(opIdx) {
+  recordCloseMarker(opIdx: number) {
     this.#bboxTracker.recordCloseMarker(
       opIdx,
       this.#recordDebugMetadataDepenencyAfterRestore
@@ -496,12 +559,12 @@ class CanvasDependencyTracker {
   /**
    * @param {number} opIdx
    */
-  beginMarkedContent(opIdx) {
+  beginMarkedContent(opIdx: number) {
     this.#bboxTracker.beginMarkedContent(opIdx);
     return this;
   }
 
-  endMarkedContent(opIdx) {
+  endMarkedContent(opIdx: number) {
     this.#bboxTracker.endMarkedContent(
       opIdx,
       this.#recordDebugMetadataDepenencyAfterRestore
@@ -509,7 +572,7 @@ class CanvasDependencyTracker {
     return this;
   }
 
-  pushBaseTransform(ctx) {
+  pushBaseTransform(ctx: CanvasRenderingContext2D) {
     this.#bboxTracker.pushBaseTransform(ctx);
     return this;
   }
@@ -523,7 +586,7 @@ class CanvasDependencyTracker {
    * @param {SimpleDependency} name
    * @param {number} idx
    */
-  recordSimpleData(name, idx) {
+  recordSimpleData(name: string, idx: number) {
     this.#simple[name] = idx;
     return this;
   }
@@ -532,7 +595,7 @@ class CanvasDependencyTracker {
    * @param {IncrementalDependency} name
    * @param {number} idx
    */
-  recordIncrementalData(name, idx) {
+  recordIncrementalData(name: string, idx: number) {
     this.#incremental[name].push(idx);
     return this;
   }
@@ -541,12 +604,12 @@ class CanvasDependencyTracker {
    * @param {IncrementalDependency} name
    * @param {number} idx
    */
-  resetIncrementalData(name, idx) {
+  resetIncrementalData(name: string, _idx: number) {
     this.#incremental[name].length = 0;
     return this;
   }
 
-  recordNamedData(name, idx) {
+  recordNamedData(name: string, idx: number) {
     this.#namedDependencies.set(name, idx);
     return this;
   }
@@ -556,19 +619,19 @@ class CanvasDependencyTracker {
    * @param {string} depName
    * @param {number} fallbackIdx
    */
-  recordSimpleDataFromNamed(name, depName, fallbackIdx) {
+  recordSimpleDataFromNamed(name: string, depName: string, fallbackIdx: number) {
     this.#simple[name] = this.#namedDependencies.get(depName) ?? fallbackIdx;
   }
 
   // All next operations, until the next .restore(), will depend on this
-  recordFutureForcedDependency(name, idx) {
+  recordFutureForcedDependency(_name: string, idx: number) {
     this.recordIncrementalData(FORCED_DEPENDENCY_LABEL, idx);
     return this;
   }
 
   // All next operations, until the next .restore(), will depend on all
   // the already recorded data with the given names.
-  inheritSimpleDataAsFutureForcedDependencies(names) {
+  inheritSimpleDataAsFutureForcedDependencies(names: string[]) {
     for (const name of names) {
       if (name in this.#simple) {
         this.recordFutureForcedDependency(name, this.#simple[name]);
@@ -584,22 +647,44 @@ class CanvasDependencyTracker {
     return this;
   }
 
-  resetBBox(idx) {
+  resetBBox(idx: number) {
     this.#bboxTracker.resetBBox(idx);
     return this;
   }
 
-  recordClipBox(idx, ctx, minX, maxX, minY, maxY) {
+  recordClipBox(
+    idx: number,
+    ctx: CanvasRenderingContext2D,
+    minX: number,
+    maxX: number,
+    minY: number,
+    maxY: number
+  ) {
     this.#bboxTracker.recordClipBox(idx, ctx, minX, maxX, minY, maxY);
     return this;
   }
 
-  recordBBox(idx, ctx, minX, maxX, minY, maxY) {
+  recordBBox(
+    idx: number,
+    ctx: CanvasRenderingContext2D,
+    minX: number,
+    maxX: number,
+    minY: number,
+    maxY: number
+  ) {
     this.#bboxTracker.recordBBox(idx, ctx, minX, maxX, minY, maxY);
     return this;
   }
 
-  recordCharacterBBox(idx, ctx, font, scale = 1, x = 0, y = 0, getMeasure) {
+  recordCharacterBBox(
+    idx: number,
+    ctx: CanvasRenderingContext2D,
+    font: any,
+    scale = 1,
+    x = 0,
+    y = 0,
+    getMeasure?: (() => TextMetrics) | null
+  ) {
     const fontBBox = font.bbox;
     let isBBoxTrustworthy;
     let computedBBox;
@@ -676,16 +761,16 @@ class CanvasDependencyTracker {
     );
   }
 
-  recordFullPageBBox(idx) {
+  recordFullPageBBox(idx: number) {
     this.#bboxTracker.recordFullPageBBox(idx);
     return this;
   }
 
-  getSimpleIndex(dependencyName) {
+  getSimpleIndex(dependencyName: string): number | undefined {
     return this.#simple[dependencyName];
   }
 
-  recordDependencies(idx, dependencyNames) {
+  recordDependencies(_idx: number, dependencyNames: string[]) {
     const pendingDependencies = this.#pendingDependencies;
     const simple = this.#simple;
     const incremental = this.#incremental;
@@ -700,9 +785,9 @@ class CanvasDependencyTracker {
     return this;
   }
 
-  recordNamedDependency(idx, name) {
+  recordNamedDependency(_idx: number, name: string) {
     if (this.#namedDependencies.has(name)) {
-      this.#pendingDependencies.add(this.#namedDependencies.get(name));
+      this.#pendingDependencies.add(this.#namedDependencies.get(name)!);
     }
 
     return this;
@@ -711,11 +796,11 @@ class CanvasDependencyTracker {
   /**
    * @param {number} idx
    */
-  recordOperation(idx, preserve = false) {
+  recordOperation(idx: number, preserve = false) {
     this.recordDependencies(idx, [FORCED_DEPENDENCY_LABEL]);
 
     if (this.#debugMetadata) {
-      const metadata = ensureDebugMetadata(this.#debugMetadata, idx);
+      const metadata = ensureDebugMetadata(this.#debugMetadata, idx)!;
       const { dependencies } = metadata;
       this.#pendingDependencies.forEach(dependencies.add, dependencies);
       this.#bboxTracker._savesStack.forEach(dependencies.add, dependencies);
@@ -742,7 +827,7 @@ class CanvasDependencyTracker {
     return this;
   }
 
-  recordShowTextOperation(idx, preserve = false) {
+  recordShowTextOperation(idx: number, preserve = false) {
     const deps = Array.from(this.#pendingDependencies);
     this.recordOperation(idx, preserve);
     this.recordIncrementalData("sameLineText", idx);
@@ -752,7 +837,7 @@ class CanvasDependencyTracker {
     return this;
   }
 
-  bboxToClipBoxDropOperation(idx, preserve = false) {
+  bboxToClipBoxDropOperation(idx: number, preserve = false) {
     const needsCleanup = !preserve && idx === this.#bboxTracker._pendingBBoxIdx;
     this.#bboxTracker.bboxToClipBoxDropOperation(idx);
     if (needsCleanup) {
@@ -766,7 +851,7 @@ class CanvasDependencyTracker {
     return this.#bboxTracker.take();
   }
 
-  takeDebugMetadata() {
+  takeDebugMetadata(): Map<number, DebugMetadataEntry> | undefined {
     return this.#debugMetadata;
   }
 }
@@ -779,19 +864,23 @@ class CanvasDependencyTracker {
  * @implements {CanvasDependencyTracker}
  */
 class CanvasNestedDependencyTracker {
-  /** @type {CanvasDependencyTracker} */
-  #dependencyTracker;
+  // `any` to allow wrapping either CanvasDependencyTracker or another
+  // CanvasNestedDependencyTracker (see constructor early-return optimisation).
+  #dependencyTracker!: any;
 
-  /** @type {number} */
-  #opIdx;
+  #opIdx!: number;
 
-  #ignoreBBoxes;
+  #ignoreBBoxes!: boolean;
 
   #nestingLevel = 0;
 
   #savesLevel = 0;
 
-  constructor(dependencyTracker, opIdx, ignoreBBoxes) {
+  constructor(
+    dependencyTracker: CanvasDependencyTracker | CanvasNestedDependencyTracker,
+    opIdx: number,
+    ignoreBBoxes: boolean
+  ) {
     if (
       dependencyTracker instanceof CanvasNestedDependencyTracker &&
       dependencyTracker.#ignoreBBoxes === !!ignoreBBoxes
@@ -811,17 +900,17 @@ class CanvasNestedDependencyTracker {
     return this.#dependencyTracker.clipBox;
   }
 
-  growOperationsCount() {
+  growOperationsCount(): never {
     throw new Error("Unreachable");
   }
 
-  save(opIdx) {
+  save(_opIdx: number) {
     this.#savesLevel++;
     this.#dependencyTracker.save(this.#opIdx);
     return this;
   }
 
-  restore(opIdx) {
+  restore(_opIdx: number) {
     if (this.#savesLevel > 0) {
       this.#dependencyTracker.restore(this.#opIdx);
       this.#savesLevel--;
@@ -829,7 +918,7 @@ class CanvasNestedDependencyTracker {
     return this;
   }
 
-  recordOpenMarker(idx) {
+  recordOpenMarker(_idx: number) {
     this.#nestingLevel++;
     return this;
   }
@@ -840,20 +929,20 @@ class CanvasNestedDependencyTracker {
       : this.#dependencyTracker.getOpenMarker();
   }
 
-  recordCloseMarker(idx) {
+  recordCloseMarker(_idx: number) {
     this.#nestingLevel--;
     return this;
   }
 
-  beginMarkedContent(opIdx) {
+  beginMarkedContent(_opIdx: number) {
     return this;
   }
 
-  endMarkedContent(opIdx) {
+  endMarkedContent(_opIdx: number) {
     return this;
   }
 
-  pushBaseTransform(ctx) {
+  pushBaseTransform(ctx: CanvasRenderingContext2D) {
     this.#dependencyTracker.pushBaseTransform(ctx);
     return this;
   }
@@ -867,7 +956,7 @@ class CanvasNestedDependencyTracker {
    * @param {SimpleDependency} name
    * @param {number} idx
    */
-  recordSimpleData(name, idx) {
+  recordSimpleData(name: string, _idx: number) {
     this.#dependencyTracker.recordSimpleData(name, this.#opIdx);
     return this;
   }
@@ -876,7 +965,7 @@ class CanvasNestedDependencyTracker {
    * @param {IncrementalDependency} name
    * @param {number} idx
    */
-  recordIncrementalData(name, idx) {
+  recordIncrementalData(name: string, _idx: number) {
     this.#dependencyTracker.recordIncrementalData(name, this.#opIdx);
     return this;
   }
@@ -885,12 +974,12 @@ class CanvasNestedDependencyTracker {
    * @param {IncrementalDependency} name
    * @param {number} idx
    */
-  resetIncrementalData(name, idx) {
+  resetIncrementalData(name: string, _idx: number) {
     this.#dependencyTracker.resetIncrementalData(name, this.#opIdx);
     return this;
   }
 
-  recordNamedData(name, idx) {
+  recordNamedData(_name: string, _idx: number) {
     // Nested dependencies are not visible to the outside.
     return this;
   }
@@ -900,7 +989,7 @@ class CanvasNestedDependencyTracker {
    * @param {string} depName
    * @param {number} fallbackIdx
    */
-  recordSimpleDataFromNamed(name, depName, fallbackIdx) {
+  recordSimpleDataFromNamed(name: string, depName: string, _fallbackIdx: number) {
     this.#dependencyTracker.recordSimpleDataFromNamed(
       name,
       depName,
@@ -910,14 +999,14 @@ class CanvasNestedDependencyTracker {
   }
 
   // All next operations, until the next .restore(), will depend on this
-  recordFutureForcedDependency(name, idx) {
+  recordFutureForcedDependency(name: string, _idx: number) {
     this.#dependencyTracker.recordFutureForcedDependency(name, this.#opIdx);
     return this;
   }
 
   // All next operations, until the next .restore(), will depend on all
   // the already recorded data with the given names.
-  inheritSimpleDataAsFutureForcedDependencies(names) {
+  inheritSimpleDataAsFutureForcedDependencies(names: string[]) {
     this.#dependencyTracker.inheritSimpleDataAsFutureForcedDependencies(names);
     return this;
   }
@@ -927,14 +1016,21 @@ class CanvasNestedDependencyTracker {
     return this;
   }
 
-  resetBBox(idx) {
+  resetBBox(_idx: number) {
     if (!this.#ignoreBBoxes) {
       this.#dependencyTracker.resetBBox(this.#opIdx);
     }
     return this;
   }
 
-  recordClipBox(idx, ctx, minX, maxX, minY, maxY) {
+  recordClipBox(
+    _idx: number,
+    ctx: CanvasRenderingContext2D,
+    minX: number,
+    maxX: number,
+    minY: number,
+    maxY: number
+  ) {
     if (!this.#ignoreBBoxes) {
       this.#dependencyTracker.recordClipBox(
         this.#opIdx,
@@ -948,7 +1044,14 @@ class CanvasNestedDependencyTracker {
     return this;
   }
 
-  recordBBox(idx, ctx, minX, maxX, minY, maxY) {
+  recordBBox(
+    _idx: number,
+    ctx: CanvasRenderingContext2D,
+    minX: number,
+    maxX: number,
+    minY: number,
+    maxY: number
+  ) {
     if (!this.#ignoreBBoxes) {
       this.#dependencyTracker.recordBBox(
         this.#opIdx,
@@ -962,7 +1065,15 @@ class CanvasNestedDependencyTracker {
     return this;
   }
 
-  recordCharacterBBox(idx, ctx, font, scale, x, y, getMeasure) {
+  recordCharacterBBox(
+    _idx: number,
+    ctx: CanvasRenderingContext2D,
+    font: any,
+    scale: number,
+    x: number,
+    y: number,
+    getMeasure?: (() => TextMetrics) | null
+  ) {
     if (!this.#ignoreBBoxes) {
       this.#dependencyTracker.recordCharacterBBox(
         this.#opIdx,
@@ -977,23 +1088,23 @@ class CanvasNestedDependencyTracker {
     return this;
   }
 
-  recordFullPageBBox(idx) {
+  recordFullPageBBox(_idx: number) {
     if (!this.#ignoreBBoxes) {
       this.#dependencyTracker.recordFullPageBBox(this.#opIdx);
     }
     return this;
   }
 
-  getSimpleIndex(dependencyName) {
+  getSimpleIndex(dependencyName: string) {
     return this.#dependencyTracker.getSimpleIndex(dependencyName);
   }
 
-  recordDependencies(idx, dependencyNames) {
+  recordDependencies(_idx: number, dependencyNames: string[]) {
     this.#dependencyTracker.recordDependencies(this.#opIdx, dependencyNames);
     return this;
   }
 
-  recordNamedDependency(idx, name) {
+  recordNamedDependency(_idx: number, name: string) {
     this.#dependencyTracker.recordNamedDependency(this.#opIdx, name);
     return this;
   }
@@ -1002,28 +1113,28 @@ class CanvasNestedDependencyTracker {
    * @param {number} idx
    * @param {SimpleDependency[]} dependencyNames
    */
-  recordOperation(idx) {
+  recordOperation(_idx: number) {
     this.#dependencyTracker.recordOperation(this.#opIdx, true);
     return this;
   }
 
-  recordShowTextOperation(idx) {
+  recordShowTextOperation(_idx: number) {
     this.#dependencyTracker.recordShowTextOperation(this.#opIdx, true);
     return this;
   }
 
-  bboxToClipBoxDropOperation(idx) {
+  bboxToClipBoxDropOperation(_idx: number) {
     if (!this.#ignoreBBoxes) {
       this.#dependencyTracker.bboxToClipBoxDropOperation(this.#opIdx, true);
     }
     return this;
   }
 
-  take() {
+  take(): never {
     throw new Error("Unreachable");
   }
 
-  takeDebugMetadata() {
+  takeDebugMetadata(): never {
     throw new Error("Unreachable");
   }
 }
@@ -1091,9 +1202,17 @@ const Dependencies = {
  * the current canvas transform.
  */
 class CanvasImagesTracker {
-  #canvasWidth;
+  #canvasWidth!: number;
 
-  #canvasHeight;
+  #canvasHeight!: number;
+
+  // Float16Array where available (MOZCENTRAL or supported), else Float32Array.
+  // Typed as `typeof Float32Array` since Float16Array shares the same interface.
+  static #CoordsArray: typeof Float32Array =
+    (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) ||
+    FeatureTest.isFloat16ArraySupported
+      ? ((globalThis as any).Float16Array as typeof Float32Array)
+      : Float32Array;
 
   #capacity = 4;
 
@@ -1102,25 +1221,26 @@ class CanvasImagesTracker {
   // Array of [x1, y1, x2, y2, x3, y3] coordinates.
   // We need three points to be able to represent a rectangle with a transform
   // applied.
-  #coords = new CanvasImagesTracker.#CoordsArray(this.#capacity * 6);
+  #coords: Float32Array = new CanvasImagesTracker.#CoordsArray(
+    this.#capacity * 6
+  ) as Float32Array;
 
-  static #CoordsArray =
-    (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) ||
-    FeatureTest.isFloat16ArraySupported
-      ? Float16Array
-      : Float32Array;
-
-  constructor(canvas) {
+  constructor(canvas: HTMLCanvasElement) {
     this.#canvasWidth = canvas.width;
     this.#canvasHeight = canvas.height;
   }
 
-  record(ctx, width, height, clipBox) {
+  record(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    clipBox: number[]
+  ) {
     if (this.#count === this.#capacity) {
       this.#capacity *= 2;
       const newCoords = new CanvasImagesTracker.#CoordsArray(
         this.#capacity * 6
-      );
+      ) as Float32Array;
       newCoords.set(this.#coords);
       this.#coords = newCoords;
     }

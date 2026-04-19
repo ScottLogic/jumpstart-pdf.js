@@ -201,7 +201,7 @@ class BasePDFStreamReader {
    * set to true.
    * @returns {Promise}
    */
-  async read(): Promise<never> {
+  async read(): Promise<{ value: ArrayBuffer | undefined; done: boolean }> {
     unreachable("Abstract method `read` called");
   }
 
@@ -238,7 +238,7 @@ class BasePDFStreamRangeReader {
    * set to true.
    * @returns {Promise}
    */
-  async read(): Promise<never> {
+  async read(): Promise<{ value: ArrayBuffer | undefined; done: boolean }> {
     unreachable("Abstract method `read` called");
   }
 

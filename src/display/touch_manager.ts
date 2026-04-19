@@ -13,34 +13,39 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { OutputScale, stopEvent } from "./display_utils.js";
 
+type TouchInfo = {
+  touch0X: number;
+  touch0Y: number;
+  touch1X: number;
+  touch1Y: number;
+};
+
 class TouchManager {
-  #container;
+  #container!: Element;
 
   #isPinching = false;
 
-  #isPinchingStopped = null;
+  #isPinchingStopped: (() => boolean) | null = null;
 
-  #isPinchingDisabled;
+  #isPinchingDisabled: (() => boolean) | null = null;
 
-  #onPinchStart;
+  #onPinchStart: (() => void) | null = null;
 
-  #onPinching;
+  #onPinching: ((origin: number[], prevDist: number, dist: number) => void) | null = null;
 
-  #onPinchEnd;
+  #onPinchEnd: (() => void) | null = null;
 
-  #pointerDownAC = null;
+  #pointerDownAC: AbortController | null = null;
 
-  #signal;
+  #signal!: AbortSignal;
 
-  #touchInfo = null;
+  #touchInfo: TouchInfo | null = null;
 
-  #touchManagerAC;
+  #touchManagerAC: AbortController | null = null;
 
-  #touchMoveAC = null;
+  #touchMoveAC: AbortController | null = null;
 
   constructor({
     container,
@@ -50,6 +55,14 @@ class TouchManager {
     onPinching = null,
     onPinchEnd = null,
     signal,
+  }: {
+    container: Element;
+    isPinchingDisabled?: (() => boolean) | null;
+    isPinchingStopped?: (() => boolean) | null;
+    onPinchStart?: (() => void) | null;
+    onPinching?: ((origin: number[], prevDist: number, dist: number) => void) | null;
+    onPinchEnd?: (() => void) | null;
+    signal: AbortSignal;
   }) {
     this.#container = container;
     this.#isPinchingStopped = isPinchingStopped;
@@ -60,7 +73,7 @@ class TouchManager {
     this.#touchManagerAC = new AbortController();
     this.#signal = AbortSignal.any([signal, this.#touchManagerAC.signal]);
 
-    container.addEventListener("touchstart", this.#onTouchStart.bind(this), {
+    container.addEventListener("touchstart", this.#onTouchStart.bind(this) as EventListener, {
       passive: false,
       signal: this.#signal,
     });
@@ -70,7 +83,7 @@ class TouchManager {
    * NOTE: Don't shadow this value since `devicePixelRatio` may change if the
    * window resolution changes, e.g. if the viewer is moved to another monitor.
    */
-  get MIN_TOUCH_DISTANCE_TO_PINCH() {
+  static get MIN_TOUCH_DISTANCE_TO_PINCH() {
     // The 35 is coming from:
     //  https://searchfox.org/mozilla-central/source/gfx/layers/apz/src/GestureEventListener.cpp#36
     //
@@ -80,7 +93,7 @@ class TouchManager {
     return 35 / OutputScale.pixelRatio;
   }
 
-  #onTouchStart(evt) {
+  #onTouchStart(evt: TouchEvent) {
     if (this.#isPinchingDisabled?.()) {
       return;
     }
@@ -96,7 +109,7 @@ class TouchManager {
       // We want to have the events at the capture phase to make sure we can
       // cancel them.
       const opts = { capture: true, signal, passive: false };
-      const cancelPointerDown = e => {
+      const cancelPointerDown = (e: PointerEvent) => {
         if (e.pointerType === "touch") {
           this.#pointerDownAC?.abort();
           this.#pointerDownAC = null;
@@ -104,18 +117,18 @@ class TouchManager {
       };
       container.addEventListener(
         "pointerdown",
-        e => {
-          if (e.pointerType === "touch") {
+        (e: Event) => {
+          if ((e as PointerEvent).pointerType === "touch") {
             // This is the second finger so we don't want it select something
             // or whatever.
             stopEvent(e);
-            cancelPointerDown(e);
+            cancelPointerDown(e as PointerEvent);
           }
         },
         opts
       );
-      container.addEventListener("pointerup", cancelPointerDown, opts);
-      container.addEventListener("pointercancel", cancelPointerDown, opts);
+      container.addEventListener("pointerup", cancelPointerDown as EventListener, opts);
+      container.addEventListener("pointercancel", cancelPointerDown as EventListener, opts);
       return;
     }
 
@@ -127,10 +140,10 @@ class TouchManager {
       const opt = { signal, capture: false, passive: false };
       container.addEventListener(
         "touchmove",
-        this.#onTouchMove.bind(this),
+        this.#onTouchMove.bind(this) as EventListener,
         opt
       );
-      const onTouchEnd = this.#onTouchEnd.bind(this);
+      const onTouchEnd = this.#onTouchEnd.bind(this) as EventListener;
       container.addEventListener("touchend", onTouchEnd, opt);
       container.addEventListener("touchcancel", onTouchEnd, opt);
 
@@ -161,7 +174,7 @@ class TouchManager {
     };
   }
 
-  #onTouchMove(evt) {
+  #onTouchMove(evt: TouchEvent) {
     if (!this.#touchInfo || evt.touches.length !== 2) {
       return;
     }
@@ -213,7 +226,7 @@ class TouchManager {
     this.#onPinching?.(origin, pDistance, distance);
   }
 
-  #onTouchEnd(evt) {
+  #onTouchEnd(evt: TouchEvent) {
     if (evt.touches.length >= 2) {
       return;
     }

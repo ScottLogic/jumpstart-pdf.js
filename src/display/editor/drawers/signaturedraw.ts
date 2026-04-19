@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+
 
 import { ContourDrawOutline } from "./contour.js";
 import { InkDrawOutline } from "./inkdraw.js";
@@ -34,7 +34,7 @@ class SignatureExtractor {
     kernelSize: 16,
   };
 
-  static #neighborIndexToId(i0, j0, i, j) {
+  static #neighborIndexToId(i0: any, j0: any, i: any, j: any) {
     /*
       The idea is to map the neighbors of a pixel into a unique id.
         3 2 1
@@ -60,7 +60,7 @@ class SignatureExtractor {
     0, 1, -1, 1, -1, 0, -1, -1, 0, -1, 1, -1, 1, 0, 1, 1,
   ]);
 
-  static #clockwiseNonZero(buf, width, i0, j0, i, j, offset) {
+  static #clockwiseNonZero(buf: any, width: any, i0: any, j0: any, i: any, j: any, offset: any) {
     const id = this.#neighborIndexToId(i0, j0, i, j);
     for (let k = 0; k < 8; k++) {
       const kk = (-k + id - offset + 16) % 8;
@@ -73,7 +73,7 @@ class SignatureExtractor {
     return -1;
   }
 
-  static #counterClockwiseNonZero(buf, width, i0, j0, i, j, offset) {
+  static #counterClockwiseNonZero(buf: any, width: any, i0: any, j0: any, i: any, j: any, offset: any) {
     const id = this.#neighborIndexToId(i0, j0, i, j);
     for (let k = 0; k < 8; k++) {
       const kk = (k + id + offset + 16) % 8;
@@ -86,7 +86,7 @@ class SignatureExtractor {
     return -1;
   }
 
-  static #findContours(buf, width, height, threshold) {
+  static #findContours(buf: any, width: any, height: any, threshold: any) {
     // Based on the Suzuki's algorithm:
     //  https://web.archive.org/web/20231213161741/https://www.nevis.columbia.edu/~vgenty/public/suzuki_et_al.pdf
 
@@ -220,7 +220,7 @@ class SignatureExtractor {
     return contours;
   }
 
-  static #douglasPeuckerHelper(points, start, end, output) {
+  static #douglasPeuckerHelper(points: any, start: any, end: any, output: any) {
     // Based on the Douglas-Peucker algorithm:
     //  https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm
     if (end - start <= 4) {
@@ -272,15 +272,15 @@ class SignatureExtractor {
     }
   }
 
-  static #douglasPeucker(points) {
-    const output = [];
+  static #douglasPeucker(points: any) {
+    const output: any[] = [];
     const len = points.length;
     this.#douglasPeuckerHelper(points, 0, len, output);
     output.push(points[len - 2], points[len - 1]);
     return output.length <= 4 ? null : output;
   }
 
-  static #bilateralFilter(buf, width, height, sigmaS, sigmaR, kernelSize) {
+  static #bilateralFilter(buf: any, width: any, height: any, sigmaS: any, sigmaR: any, kernelSize: any) {
     // The bilateral filter is a nonlinear filter that does spatial averaging.
     // Its main interest is to preserve edges while removing noise.
     // See https://en.wikipedia.org/wiki/Bilateral_filter for more details.
@@ -350,7 +350,7 @@ class SignatureExtractor {
     return [out, histogram];
   }
 
-  static #getHistogram(buf) {
+  static #getHistogram(buf: any) {
     const histogram = new Uint32Array(256);
     for (const g of buf) {
       histogram[g]++;
@@ -358,7 +358,7 @@ class SignatureExtractor {
     return histogram;
   }
 
-  static #toUint8(buf) {
+  static #toUint8(buf: any) {
     // We have a RGBA buffer, containing a grayscale image.
     // We want to convert it into a basic G buffer.
     // Also, we want to normalize the values between 0 and 255 in order to
@@ -380,7 +380,7 @@ class SignatureExtractor {
     return out;
   }
 
-  static #guessThreshold(histogram) {
+  static #guessThreshold(histogram: any) {
     // We want to find the threshold that will separate the background from the
     // foreground.
     // We could have used Otsu's method, but unfortunately it doesn't work well
@@ -391,7 +391,7 @@ class SignatureExtractor {
     let i;
     let M = -Infinity;
     let L = -Infinity;
-    const min = histogram.findIndex(v => v !== 0);
+    const min = histogram.findIndex((v: any) => v !== 0);
     let pos = min;
     let spos = min;
     for (i = min; i < 256; i++) {
@@ -414,7 +414,7 @@ class SignatureExtractor {
     return i;
   }
 
-  static #getGrayPixels(bitmap) {
+  static #getGrayPixels(bitmap: any) {
     const originalBitmap = bitmap;
     const { width, height } = bitmap;
     const { maxDim } = this.#PARAMETERS;
@@ -433,7 +433,7 @@ class SignatureExtractor {
         newHeight = Math.ceil(prevHeight / 2);
 
         const offscreen = new OffscreenCanvas(newWidth, newHeight);
-        const ctx = offscreen.getContext("2d");
+        const ctx = offscreen.getContext("2d") as any;
         ctx.drawImage(
           bitmap,
           0,
@@ -460,7 +460,7 @@ class SignatureExtractor {
       newHeight = Math.round(newHeight * ratio);
     }
     const offscreen = new OffscreenCanvas(newWidth, newHeight);
-    const ctx = offscreen.getContext("2d", { willReadFrequently: true });
+    const ctx = offscreen.getContext("2d", { willReadFrequently: true }) as any;
     ctx.fillStyle = "white";
     ctx.fillRect(0, 0, newWidth, newHeight);
     ctx.filter = "grayscale(1)";
@@ -482,15 +482,15 @@ class SignatureExtractor {
   }
 
   static extractContoursFromText(
-    text,
-    { fontFamily, fontStyle, fontWeight },
-    pageWidth,
-    pageHeight,
-    rotation,
-    innerMargin
+    text: any,
+    { fontFamily, fontStyle, fontWeight }: { fontFamily: any; fontStyle: any; fontWeight: any },
+    pageWidth: any,
+    pageHeight: any,
+    rotation: any,
+    innerMargin: any
   ) {
     let canvas = new OffscreenCanvas(1, 1);
-    let ctx = canvas.getContext("2d", { alpha: false });
+    let ctx: any = canvas.getContext("2d", { alpha: false });
     const fontSize = 200;
     const font =
       (ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`);
@@ -557,7 +557,7 @@ class SignatureExtractor {
     });
   }
 
-  static process(bitmap, pageWidth, pageHeight, rotation, innerMargin) {
+  static process(bitmap: any, pageWidth: any, pageHeight: any, rotation: any, innerMargin: any) {
     const [uint8Buf, width, height] = this.#getGrayPixels(bitmap);
     const [buffer, histogram] = this.#bilateralFilter(
       uint8Buf,
@@ -590,7 +590,7 @@ class SignatureExtractor {
     innerMargin,
     mustSmooth,
     areContours,
-  }) {
+  }: { lines: any; pageWidth: any; pageHeight: any; rotation: any; innerMargin: any; mustSmooth: any; areContours: any }) {
     if (rotation % 180 !== 0) {
       [pageWidth, pageHeight] = [pageHeight, pageWidth];
     }
@@ -665,7 +665,7 @@ class SignatureExtractor {
     thickness,
     width,
     height,
-  }) {
+  }: { outlines: any; areContours: any; thickness: any; width: any; height: any }) {
     // We create a single array containing all the outlines.
     // The format is the following:
     // - 4 bytes: data length.
@@ -737,7 +737,7 @@ class SignatureExtractor {
     await writer.ready;
 
     writer.write(header);
-    const BufferCtor = bufferType.prototype.constructor;
+    const BufferCtor: any = bufferType.prototype.constructor;
     for (const points of outlines) {
       const diffs = new BufferCtor(points.length - 2);
       for (let i = 2, ii = points.length; i < ii; i++) {
@@ -749,12 +749,12 @@ class SignatureExtractor {
     writer.close();
 
     const bytes = await new Response(cs.readable).bytes();
-    return bytes.toBase64();
+    return (bytes as any).toBase64();
   }
 
-  static async decompressSignature(signatureData) {
+  static async decompressSignature(signatureData: any) {
     try {
-      const bytes = Uint8Array.fromBase64(signatureData);
+      const bytes = (Uint8Array as any).fromBase64(signatureData);
       const { readable, writable } = new DecompressionStream("deflate-raw");
       const writer = writable.getWriter();
       await writer.ready;
@@ -769,7 +769,7 @@ class SignatureExtractor {
         })
         .catch(() => {});
 
-      let data = null;
+      let data: any = null;
       let offset = 0;
       for await (const chunk of readable) {
         data ||= new Uint8Array(new Uint32Array(chunk.buffer, 0, 4)[0]);
@@ -793,7 +793,7 @@ class SignatureExtractor {
       const diffsOffset =
         (BASE_HEADER_LENGTH + POINTS_PROPERTIES_NUMBER * numberOfDrawings) *
         Uint32Array.BYTES_PER_ELEMENT;
-      let diffs;
+      let diffs: any;
 
       switch (bufferType) {
         case Int8Array.BYTES_PER_ELEMENT:

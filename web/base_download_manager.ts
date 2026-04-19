@@ -13,36 +13,39 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { isPdfFile } from "pdfjs-lib";
 
 class BaseDownloadManager {
-  #openBlobUrls = new WeakMap();
+  #openBlobUrls = new WeakMap<Uint8Array<ArrayBuffer>, string>();
 
   constructor() {
     if (
-      (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) &&
+      (typeof PDFJSDev === "undefined" || PDFJSDev!.test("TESTING")) &&
       this.constructor === BaseDownloadManager
     ) {
       throw new Error("Cannot initialize BaseDownloadManager.");
     }
   }
 
-  _triggerDownload(blobUrl, originalUrl, filename, isAttachment = false) {
+  _triggerDownload(
+    blobUrl: string | null,
+    originalUrl: string,
+    filename: string,
+    isAttachment = false
+  ): void {
     throw new Error("Not implemented: _triggerDownload");
   }
 
-  _getOpenDataUrl(blobUrl, filename, dest = null) {
+  _getOpenDataUrl(blobUrl: string, filename: string, dest: string | null = null): string {
     throw new Error("Not implemented: _getOpenDataUrl");
   }
 
   /**
-   * @param {Uint8Array} data
+   * @param {Uint8Array<ArrayBuffer>} data
    * @param {string} filename
    * @param {string} [contentType]
    */
-  downloadData(data, filename, contentType) {
+  downloadData(data: Uint8Array<ArrayBuffer>, filename: string, contentType?: string): void {
     const blobUrl = URL.createObjectURL(
       new Blob([data], { type: contentType })
     );
@@ -56,12 +59,12 @@ class BaseDownloadManager {
   }
 
   /**
-   * @param {Uint8Array} data
+   * @param {Uint8Array<ArrayBuffer>} data
    * @param {string} filename
    * @param {string | null} [dest]
    * @returns {boolean} Indicating if the data was opened.
    */
-  openOrDownloadData(data, filename, dest = null) {
+  openOrDownloadData(data: Uint8Array<ArrayBuffer>, filename: string, dest: string | null = null): boolean {
     const isPdfData = isPdfFile(filename);
     const contentType = isPdfData ? "application/pdf" : "";
 
@@ -88,11 +91,11 @@ class BaseDownloadManager {
   }
 
   /**
-   * @param {Uint8Array} data
+   * @param {Uint8Array<ArrayBuffer>} data
    * @param {string} url
    * @param {string} filename
    */
-  download(data, url, filename) {
+  download(data: Uint8Array<ArrayBuffer> | null, url: string, filename: string): void {
     const blobUrl = data
       ? URL.createObjectURL(new Blob([data], { type: "application/pdf" }))
       : null;

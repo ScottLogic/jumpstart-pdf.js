@@ -13,21 +13,33 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { stringToBytes, unreachable } from "../shared/util.js";
 import { fetchData } from "./display_utils.js";
 
+type BinaryDataKind = "cMapUrl" | "standardFontDataUrl" | "wasmUrl";
+
 class BaseBinaryDataFactory {
-  #errorStr = Object.freeze({
+  #errorStr: Readonly<Record<BinaryDataKind, string>> = Object.freeze({
     cMapUrl: "CMap",
     standardFontDataUrl: "font",
     wasmUrl: "wasm",
   });
 
-  constructor({ cMapUrl = null, standardFontDataUrl = null, wasmUrl = null }) {
+  cMapUrl: string | null;
+  standardFontDataUrl: string | null;
+  wasmUrl: string | null;
+
+  constructor({
+    cMapUrl = null,
+    standardFontDataUrl = null,
+    wasmUrl = null,
+  }: {
+    cMapUrl?: string | null;
+    standardFontDataUrl?: string | null;
+    wasmUrl?: string | null;
+  } = {}) {
     if (
-      (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) &&
+      (typeof PDFJSDev === "undefined" || PDFJSDev!.test("TESTING")) &&
       this.constructor === BaseBinaryDataFactory
     ) {
       unreachable("Cannot initialize BaseBinaryDataFactory.");
@@ -37,7 +49,7 @@ class BaseBinaryDataFactory {
     this.wasmUrl = wasmUrl;
   }
 
-  async fetch({ kind, filename }) {
+  async fetch({ kind, filename }: { kind: BinaryDataKind; filename: string }): Promise<Uint8Array> {
     switch (kind) {
       case "cMapUrl":
       case "standardFontDataUrl":
@@ -52,16 +64,15 @@ class BaseBinaryDataFactory {
     }
     const url = `${baseUrl}${filename}`;
 
-    return this._fetch(url, kind).catch(reason => {
+    return this._fetch(url, kind).catch(() => {
       throw new Error(`Unable to load ${this.#errorStr[kind]} data at: ${url}`);
     });
   }
 
   /**
    * @ignore
-   * @returns {Promise<Uint8Array>}
    */
-  async _fetch(url, kind) {
+  async _fetch(url: string, kind: string): Promise<Uint8Array> {
     unreachable("Abstract method `_fetch` called.");
   }
 }
@@ -70,7 +81,7 @@ class DOMBinaryDataFactory extends BaseBinaryDataFactory {
   /**
    * @ignore
    */
-  async _fetch(url, kind) {
+  override async _fetch(url: string, kind: string): Promise<Uint8Array> {
     const type =
       kind === "cMapUrl" && !url.endsWith(".bcmap") ? "text" : "bytes";
     const data = await fetchData(url, type);

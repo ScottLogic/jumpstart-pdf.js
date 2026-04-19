@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 /** @typedef {import("./display/api").OnProgressParameters} OnProgressParameters */
 
 /** @typedef {import("./display/api").PDFDocumentLoadingTask} PDFDocumentLoadingTask */
@@ -92,12 +90,12 @@ import { TouchManager } from "./display/touch_manager.js";
 import { XfaLayer } from "./display/xfa_layer.js";
 
 if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("TESTING || GENERIC")) {
-  globalThis._pdfjsTestingUtils = {
+  (globalThis as any)._pdfjsTestingUtils = {
     HighlightOutliner,
   };
 }
 
-globalThis.pdfjsLib = {
+(globalThis as any).pdfjsLib = {
   AbortException,
   AnnotationEditorLayer,
   AnnotationEditorParamsType,

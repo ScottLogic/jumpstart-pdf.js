@@ -13,10 +13,11 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+import type { EventBus } from "./event_utils.js";
 
-if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-  var compatParams = new Map();
+let compatParams: Map<string, unknown> | undefined;
+if (typeof PDFJSDev === "undefined" || PDFJSDev!.test("GENERIC")) {
+  compatParams = new Map();
   const { maxTouchPoints, platform, userAgent } = navigator;
 
   const isAndroid = /Android/.test(userAgent);
@@ -44,10 +45,10 @@ const OptionKind = {
   WORKER: 0x08,
   EVENT_DISPATCH: 0x10,
   PREFERENCE: 0x80,
-};
+} as const;
 
 // Should only be used with options that allow multiple types.
-const Type = {
+const Type: Record<string, number> = {
   BOOLEAN: 0x01,
   NUMBER: 0x02,
   OBJECT: 0x04,
@@ -55,12 +56,14 @@ const Type = {
   UNDEFINED: 0x10,
 };
 
+type OptionEntry = { value: unknown; kind: number; type?: number };
+
 /**
  * NOTE: These options are used to generate the `default_preferences.json` file,
  *       see `OptionKind.PREFERENCE`, hence the values below must use only
  *       primitive types and cannot rely on any imported types.
  */
-const defaultOptions = {
+const defaultOptions: Record<string, OptionEntry> = {
   allowedGlobalEvents: {
     /** @type {Object} */
     value: null,
@@ -530,7 +533,7 @@ const defaultOptions = {
     /** @type {Object} */
     value:
       typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")
-        ? globalThis.pdfjsPreloadedWorker || null
+        ? (globalThis as Record<string, unknown>)["pdfjsPreloadedWorker"] ?? null
         : null,
     kind: OptionKind.WORKER,
   },
@@ -631,9 +634,13 @@ if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
 }
 
 class AppOptions {
-  static eventBus;
+  static eventBus: EventBus | undefined;
 
-  static #opts = new Map();
+  static _hasInvokedSet: boolean = false;
+
+  static _checkDisablePreferences: (() => boolean) | undefined;
+
+  static #opts = new Map<string, unknown>();
 
   static {
     // Initialize all the user-options.
@@ -643,7 +650,7 @@ class AppOptions {
 
     if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
       // Apply any compatibility-values to the user-options.
-      for (const [name, value] of compatParams) {
+      for (const [name, value] of compatParams!) {
         this.#opts.set(name, value);
       }
       this._hasInvokedSet = false;
@@ -671,12 +678,12 @@ class AppOptions {
     }
   }
 
-  static get(name) {
+  static get(name: string): unknown {
     return this.#opts.get(name);
   }
 
-  static getAll(kind = null, defaultOnly = false) {
-    const options = Object.create(null);
+  static getAll(kind: number | null = null, defaultOnly = false): Record<string, unknown> {
+    const options: Record<string, unknown> = Object.create(null);
     for (const name in defaultOptions) {
       const defaultOpt = defaultOptions[name];
 
@@ -688,15 +695,15 @@ class AppOptions {
     return options;
   }
 
-  static set(name, value) {
+  static set(name: string, value: unknown): void {
     this.setAll({ [name]: value });
   }
 
-  static setAll(options, prefs = false) {
+  static setAll(options: Record<string, unknown>, prefs = false): void {
     if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
       this._hasInvokedSet ||= true;
     }
-    let events;
+    let events: Map<string, unknown> | undefined;
 
     for (const name in options) {
       const defaultOpt = defaultOptions[name],
@@ -706,7 +713,7 @@ class AppOptions {
         !defaultOpt ||
         !(
           typeof userOpt === typeof defaultOpt.value ||
-          Type[(typeof userOpt).toUpperCase()] & defaultOpt.type
+          Type[(typeof userOpt).toUpperCase()] & (defaultOpt.type ?? 0)
         )
       ) {
         continue;
@@ -720,14 +727,14 @@ class AppOptions {
         continue;
       }
       if (this.eventBus && kind & OptionKind.EVENT_DISPATCH) {
-        (events ||= new Map()).set(name, userOpt);
+        (events ??= new Map()).set(name, userOpt);
       }
       this.#opts.set(name, userOpt);
     }
 
     if (events) {
       for (const [name, value] of events) {
-        this.eventBus.dispatch(name.toLowerCase(), { source: this, value });
+        this.eventBus!.dispatch(name.toLowerCase(), { source: this, value });
       }
     }
   }

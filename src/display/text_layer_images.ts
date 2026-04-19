@@ -13,34 +13,45 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { Util } from "../shared/util.js";
 
-function percentage(value) {
+function percentage(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
 }
+
+type ImageCoords = {
+  inverseTransform: number[];
+  width: number;
+  height: number;
+  x1: number;
+  y1: number;
+};
 
 /**
  * Used to manage paceholder <canvas> elements that, when right-clicked on,
  * are populated with the corresponding image extracted from the PDF page.
  */
 class TextLayerImages {
-  #coordinates = [];
+  #coordinates: Float32Array = new Float32Array(0);
 
-  #coordinatesByElement = new Map();
+  #coordinatesByElement = new Map<HTMLCanvasElement, ImageCoords>();
 
-  #getPageCanvas = null;
+  #getPageCanvas: (() => HTMLCanvasElement | null) | null = null;
 
-  #minSize = 0;
+  #minSize: number = 0;
 
-  #pageWidth = 0;
+  #pageWidth: number = 0;
 
-  #pageHeight = 0;
+  #pageHeight: number = 0;
 
-  static #activeImage = null;
+  static #activeImage: WeakRef<HTMLCanvasElement> | null = null;
 
-  constructor(minSize, coordinates, viewport, getPageCanvas) {
+  constructor(
+    minSize: number,
+    coordinates: Float32Array,
+    viewport: { rawDims: { pageWidth: number; pageHeight: number } },
+    getPageCanvas: () => HTMLCanvasElement | null
+  ) {
     this.#minSize = minSize;
     this.#coordinates = coordinates;
     this.#pageWidth = viewport.rawDims.pageWidth;
@@ -83,7 +94,7 @@ class TextLayerImages {
 
       const { inverseTransform, x1, y1, width, height } = coords;
 
-      const pageCanvas = this.#getPageCanvas();
+      const pageCanvas = this.#getPageCanvas!()!;
 
       const imageX1 = Math.ceil(x1 * pageCanvas.width);
       const imageY1 = Math.ceil(y1 * pageCanvas.height);
@@ -97,8 +108,8 @@ class TextLayerImages {
       imgElement.width = imageX2 - imageX1;
       imgElement.height = imageY2 - imageY1;
 
-      const ctx = imgElement.getContext("2d");
-      ctx.setTransform(...inverseTransform);
+      const ctx = imgElement.getContext("2d")!;
+      ctx.setTransform(...(inverseTransform as [number, number, number, number, number, number]));
       ctx.translate(-imageX1, -imageY1);
       ctx.drawImage(pageCanvas, 0, 0);
     });
@@ -106,9 +117,8 @@ class TextLayerImages {
     return container;
   }
 
-  #createImagePlaceholder(
-    [x1, y1, x2, y2, x3, y3] // top left, bottom left, top right
-  ) {
+  #createImagePlaceholder(coords: Float32Array): HTMLCanvasElement | null {
+    const [x1, y1, x2, y2, x3, y3] = coords; // top left, bottom left, top right
     const width = Math.hypot(
       (x3 - x1) * this.#pageWidth,
       (y3 - y1) * this.#pageHeight

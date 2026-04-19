@@ -13,16 +13,14 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { isNodeJS } from "../shared/util.js";
 import { isValidFetchUrl } from "./display_utils.js";
 import { PDFFetchStream } from "./fetch_stream.js";
 import { PDFNetworkStream } from "./network.js";
 import { PDFNodeStream } from "./node_stream.js";
 
-function getNetworkStream(url) {
-  return isValidFetchUrl(url)
+function getNetworkStream(url: string | URL) {
+  return (isValidFetchUrl as (url: string | URL) => boolean)(url)
     ? PDFFetchStream
     : typeof PDFJSDev !== "undefined" && PDFJSDev.test("GENERIC") && isNodeJS
       ? PDFNodeStream

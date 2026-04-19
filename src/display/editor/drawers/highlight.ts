@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+
 
 import { FreeDrawOutline, FreeDrawOutliner } from "./freedraw.js";
 import { Outline } from "./outline.js";
@@ -26,9 +26,9 @@ class HighlightOutliner {
 
   #lastPoint;
 
-  #verticalEdges = [];
+  #verticalEdges: any[] = [];
 
-  #intervals = [];
+  #intervals: any[] = [];
 
   /**
    * Construct an outliner.
@@ -42,7 +42,7 @@ class HighlightOutliner {
    * @param {boolean} isLTR - true if we're in LTR mode. It's used to determine
    *   the last point of the boxes.
    */
-  constructor(boxes, borderWidth = 0, innerMargin = 0, isLTR = true) {
+  constructor(boxes: any, borderWidth = 0, innerMargin = 0, isLTR = true) {
     const minMax = [Infinity, Infinity, -Infinity, -Infinity];
 
     // We round the coordinates to slightly reduce the number of edges in the
@@ -69,7 +69,7 @@ class HighlightOutliner {
     const shiftedMinY = minMax[1] - innerMargin;
     let firstPointX = isLTR ? -Infinity : Infinity;
     let firstPointY = Infinity;
-    const lastEdge = this.#verticalEdges.at(isLTR ? -1 : -2);
+    const lastEdge: any = this.#verticalEdges.at(isLTR ? -1 : -2);
     const lastPoint = [lastEdge[0], lastEdge[2]];
 
     // Convert the coordinates of the edges into box coordinates.
@@ -136,7 +136,7 @@ class HighlightOutliner {
     return this.#getOutlines(outlineVerticalEdges);
   }
 
-  #getOutlines(outlineVerticalEdges) {
+  #getOutlines(outlineVerticalEdges: any) {
     const edges = [];
     const allEdges = new Set();
 
@@ -163,7 +163,7 @@ class HighlightOutliner {
     let outline;
 
     while (allEdges.size > 0) {
-      const edge = allEdges.values().next().value;
+      const edge: any = allEdges.values().next().value;
       let [x, y1, y2, edge1, edge2] = edge;
       allEdges.delete(edge);
       let lastPointX = x;
@@ -201,7 +201,7 @@ class HighlightOutliner {
     );
   }
 
-  #binarySearch(y) {
+  #binarySearch(y: any) {
     const array = this.#intervals;
     let start = 0;
     let end = array.length - 1;
@@ -221,12 +221,12 @@ class HighlightOutliner {
     return end + 1;
   }
 
-  #insert([, y1, y2]) {
+  #insert([, y1, y2]: any) {
     const index = this.#binarySearch(y1);
     this.#intervals.splice(index, 0, [y1, y2]);
   }
 
-  #remove([, y1, y2]) {
+  #remove([, y1, y2]: any) {
     const index = this.#binarySearch(y1);
     for (let i = index; i < this.#intervals.length; i++) {
       const [start, end] = this.#intervals[i];
@@ -250,7 +250,7 @@ class HighlightOutliner {
     }
   }
 
-  #breakEdge(edge) {
+  #breakEdge(edge: any) {
     const [x, y1, y2] = edge;
     const results = [[x, y1, y2]];
     const index = this.#binarySearch(y2);
@@ -292,7 +292,11 @@ class HighlightOutline extends Outline {
 
   #outlines;
 
-  constructor(outlines, box, firstPoint, lastPoint) {
+  declare firstPoint: any;
+
+  declare lastPoint: any;
+
+  constructor(outlines: any, box: any, firstPoint: any, lastPoint: any) {
     super();
     this.#outlines = outlines;
     this.#box = box;
@@ -327,7 +331,7 @@ class HighlightOutline extends Outline {
    * @param {number} _rotation - the rotation of the annotation.
    * @returns {Array<Array<number>>}
    */
-  serialize([blX, blY, trX, trY], _rotation) {
+  serialize([blX, blY, trX, trY]: any, _rotation: any) {
     const outlines = [];
     const width = trX - blX;
     const height = trY - blY;
@@ -352,7 +356,7 @@ class HighlightOutline extends Outline {
 }
 
 class FreeHighlightOutliner extends FreeDrawOutliner {
-  newFreeDrawOutline(outline, points, box, scaleFactor, innerMargin, isLTR) {
+  newFreeDrawOutline(outline: any, points: any, box: any, scaleFactor: any, innerMargin: any, isLTR: any) {
     return new FreeHighlightOutline(
       outline,
       points,
@@ -365,7 +369,7 @@ class FreeHighlightOutliner extends FreeDrawOutliner {
 }
 
 class FreeHighlightOutline extends FreeDrawOutline {
-  newOutliner(point, box, scaleFactor, thickness, isLTR, innerMargin = 0) {
+  newOutliner(point: any, box: any, scaleFactor: any, thickness: any, isLTR: any, innerMargin: any = 0) {
     return new FreeHighlightOutliner(
       point,
       box,

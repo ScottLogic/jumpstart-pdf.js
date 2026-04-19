@@ -13,9 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-/* globals process */
-
 import { AbortException, assert } from "../shared/util.js";
 import {
   BasePDFStream,
@@ -25,22 +22,24 @@ import {
 import { createResponseError } from "./network_utils.js";
 import { getArrayBuffer } from "./fetch_stream.js";
 
+type ReadResult = { value: ArrayBuffer | undefined; done: boolean };
+
 if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) {
   throw new Error(
     'Module "./node_stream.js" shall not be used with MOZCENTRAL builds.'
   );
 }
 
-function getReadableStream(url, opts = null) {
-  const fs = process.getBuiltinModule("fs");
-  const { Readable } = process.getBuiltinModule("stream");
+function getReadableStream(url: string | URL, opts: any = null) {
+  const fs = (process as any).getBuiltinModule("fs");
+  const { Readable } = (process as any).getBuiltinModule("stream");
 
   const readStream = fs.createReadStream(url, opts);
   return Readable.toWeb(readStream);
 }
 
 class PDFNodeStream extends BasePDFStream {
-  constructor(source) {
+  constructor(source: any) {
     super(source, PDFNodeStreamReader, PDFNodeStreamRangeReader);
     const { url } = source;
 
@@ -52,17 +51,17 @@ class PDFNodeStream extends BasePDFStream {
 }
 
 class PDFNodeStreamReader extends BasePDFStreamReader {
-  _reader = null;
+  _reader: any = null;
 
-  constructor(stream) {
+  constructor(stream: BasePDFStream) {
     super(stream);
-    const { disableRange, disableStream, rangeChunkSize, url } = stream._source;
+    const { disableRange, disableStream, rangeChunkSize, url } = (stream as any)._source;
 
     this._isStreamingSupported = !disableStream;
 
-    const fs = process.getBuiltinModule("fs/promises");
+    const fs = (process as any).getBuiltinModule("fs/promises");
     fs.lstat(url)
-      .then(stat => {
+      .then((stat: any) => {
         const readableStream = getReadableStream(url);
         this._reader = readableStream.getReader();
 
@@ -80,7 +79,7 @@ class PDFNodeStreamReader extends BasePDFStreamReader {
 
         this._headersCapability.resolve();
       })
-      .catch(error => {
+      .catch((error: any) => {
         if (error.code === "ENOENT") {
           error = createResponseError(/* status = */ 0, url);
         }
@@ -88,31 +87,31 @@ class PDFNodeStreamReader extends BasePDFStreamReader {
       });
   }
 
-  async read() {
+  async read(): Promise<ReadResult> {
     await this._headersCapability.promise;
     const { value, done } = await this._reader.read();
     if (done) {
-      return { value, done };
+      return { value: undefined, done };
     }
     this._loaded += value.byteLength;
     this._callOnProgress();
 
-    return { value: getArrayBuffer(value), done: false };
+    return { value: getArrayBuffer(value) as ArrayBuffer, done: false };
   }
 
-  cancel(reason) {
+  cancel(reason: unknown) {
     this._reader?.cancel(reason);
   }
 }
 
 class PDFNodeStreamRangeReader extends BasePDFStreamRangeReader {
-  _readCapability = Promise.withResolvers();
+  _readCapability = Promise.withResolvers<void>();
 
-  _reader = null;
+  _reader: any = null;
 
-  constructor(stream, begin, end) {
+  constructor(stream: BasePDFStream, begin: number, end: number) {
     super(stream, begin, end);
-    const { url } = stream._source;
+    const { url } = (stream as any)._source;
 
     try {
       const readableStream = getReadableStream(url, {
@@ -127,16 +126,16 @@ class PDFNodeStreamRangeReader extends BasePDFStreamRangeReader {
     }
   }
 
-  async read() {
+  async read(): Promise<ReadResult> {
     await this._readCapability.promise;
     const { value, done } = await this._reader.read();
     if (done) {
-      return { value, done };
+      return { value: undefined, done };
     }
-    return { value: getArrayBuffer(value), done: false };
+    return { value: getArrayBuffer(value) as ArrayBuffer, done: false };
   }
 
-  cancel(reason) {
+  cancel(reason: unknown) {
     this._reader?.cancel(reason);
   }
 }

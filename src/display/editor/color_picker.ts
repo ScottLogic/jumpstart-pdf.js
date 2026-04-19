@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
+
 
 import { AnnotationEditorParamsType, shadow } from "../../shared/util.js";
 import { KeyboardManager } from "./tools.js";
@@ -25,27 +25,27 @@ import { noContextMenu } from "../display_utils.js";
  * to select a color for the annotation.
  */
 class ColorPicker {
-  #button = null;
+  #button: any = null;
 
-  #buttonSwatch = null;
+  #buttonSwatch: any = null;
 
-  #defaultColor;
+  #defaultColor: any;
 
-  #dropdown = null;
+  #dropdown: any = null;
 
   #dropdownWasFromKeyboard = false;
 
   #isMainColorPicker = false;
 
-  #editor = null;
+  #editor: any = null;
 
-  #eventBus;
+  #eventBus: any;
 
-  #openDropdownAC = null;
+  #openDropdownAC: any = null;
 
-  #uiManager = null;
+  #uiManager: any = null;
 
-  static #l10nColor = null;
+  static #l10nColor: any = null;
 
   static get _keyboardManager() {
     return shadow(
@@ -71,7 +71,7 @@ class ColorPicker {
     );
   }
 
-  constructor({ editor = null, uiManager = null }) {
+  constructor({ editor = null, uiManager = null }: any) {
     if (editor) {
       this.#isMainColorPicker = false;
       this.#editor = editor;
@@ -97,11 +97,11 @@ class ColorPicker {
   renderButton() {
     const button = (this.#button = document.createElement("button"));
     button.className = "colorPicker";
-    button.tabIndex = "0";
+    button.tabIndex = 0;
     button.setAttribute("data-l10n-id", "pdfjs-editor-colorpicker-button");
-    button.ariaHasPopup = "true";
+    (button as any).ariaHasPopup = "true";
     if (this.#editor) {
-      button.ariaControls = `${this.#editor.id}_colorpicker_dropdown`;
+      (button as any).ariaControls = `${this.#editor.id}_colorpicker_dropdown`;
     }
     const signal = this.#uiManager._signal;
     button.addEventListener("click", this.#openDropdown.bind(this), { signal });
@@ -116,8 +116,8 @@ class ColorPicker {
 
   renderMainDropdown() {
     const dropdown = (this.#dropdown = this.#getDropdownRoot());
-    dropdown.ariaOrientation = "horizontal";
-    dropdown.ariaLabelledBy = "highlightColorPickerLabel";
+    (dropdown as any).ariaOrientation = "horizontal";
+    (dropdown as any).ariaLabelledBy = "highlightColorPickerLabel";
 
     return dropdown;
   }
@@ -136,7 +136,7 @@ class ColorPicker {
     }
     for (const [name, color] of this.#uiManager.highlightColors) {
       const button = document.createElement("button");
-      button.tabIndex = "0";
+      button.tabIndex = 0;
       button.role = "option";
       button.setAttribute("data-color", color);
       button.title = name;
@@ -145,7 +145,7 @@ class ColorPicker {
       button.append(swatch);
       swatch.className = "swatch";
       swatch.style.backgroundColor = color;
-      button.ariaSelected = color === this.#defaultColor;
+      (button as any).ariaSelected = color === this.#defaultColor;
       button.addEventListener("click", this.#colorSelect.bind(this, color), {
         signal,
       });
@@ -157,7 +157,7 @@ class ColorPicker {
     return div;
   }
 
-  #colorSelect(color, event) {
+  #colorSelect(color: any, event: any) {
     event.stopPropagation();
     this.#eventBus.dispatch("switchannotationeditorparams", {
       source: this,
@@ -167,7 +167,7 @@ class ColorPicker {
     this.updateColor(color);
   }
 
-  _colorSelectFromKeyboard(event) {
+  _colorSelectFromKeyboard(event: any) {
     if (event.target === this.#button) {
       this.#openDropdown(event);
       return;
@@ -179,7 +179,7 @@ class ColorPicker {
     this.#colorSelect(color, event);
   }
 
-  _moveToNext(event) {
+  _moveToNext(event: any) {
     if (!this.#isDropdownVisible) {
       this.#openDropdown(event);
       return;
@@ -191,7 +191,7 @@ class ColorPicker {
     event.target.nextSibling?.focus();
   }
 
-  _moveToPrevious(event) {
+  _moveToPrevious(event: any) {
     if (
       event.target === this.#dropdown?.firstElementChild ||
       event.target === this.#button
@@ -207,7 +207,7 @@ class ColorPicker {
     event.target.previousSibling?.focus();
   }
 
-  _moveToBeginning(event) {
+  _moveToBeginning(event: any) {
     if (!this.#isDropdownVisible) {
       this.#openDropdown(event);
       return;
@@ -215,7 +215,7 @@ class ColorPicker {
     this.#dropdown.firstElementChild?.focus();
   }
 
-  _moveToEnd(event) {
+  _moveToEnd(event: any) {
     if (!this.#isDropdownVisible) {
       this.#openDropdown(event);
       return;
@@ -223,11 +223,11 @@ class ColorPicker {
     this.#dropdown.lastElementChild?.focus();
   }
 
-  #keyDown(event) {
+  #keyDown(event: any) {
     ColorPicker._keyboardManager.exec(this, event);
   }
 
-  #openDropdown(event) {
+  #openDropdown(event: any) {
     if (this.#isDropdownVisible) {
       this.hideDropdown();
       return;
@@ -250,7 +250,7 @@ class ColorPicker {
     this.#button.append(root);
   }
 
-  #pointerDown(event) {
+  #pointerDown(event: any) {
     if (this.#dropdown?.contains(event.target)) {
       return;
     }
@@ -285,7 +285,7 @@ class ColorPicker {
     });
   }
 
-  updateColor(color) {
+  updateColor(color: any) {
     if (this.#buttonSwatch) {
       this.#buttonSwatch.style.backgroundColor = color;
     }
@@ -314,15 +314,15 @@ class ColorPicker {
  * to select a color for the annotation.
  */
 class BasicColorPicker {
-  #input = null;
+  #input: any = null;
 
-  #editor = null;
+  #editor: any = null;
 
-  #uiManager = null;
+  #uiManager: any = null;
 
-  static #l10nColor = null;
+  static #l10nColor: any = null;
 
-  constructor(editor) {
+  constructor(editor: any) {
     this.#editor = editor;
     this.#uiManager = editor._uiManager;
 
@@ -353,7 +353,7 @@ class BasicColorPicker {
     return input;
   }
 
-  update(value) {
+  update(value: any) {
     if (!this.#input) {
       return;
     }

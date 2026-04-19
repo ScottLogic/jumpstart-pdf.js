@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import {
   BasePDFStream,
   BasePDFStreamRangeReader,
@@ -23,15 +21,38 @@ import {
 import { assert } from "../shared/util.js";
 import { isPdfFile } from "./display_utils.js";
 
-function getArrayBuffer(val) {
+type ReadResult = { value: ArrayBuffer | undefined; done: boolean };
+type ReadCapability = ReturnType<typeof Promise.withResolvers<ReadResult>>;
+
+type TransportEvent =
+  | { type: "range" | "progressiveRead"; begin: number; chunk: ArrayBuffer }
+  | { type: "progressiveDone" };
+
+interface PDFDataRangeTransport {
+  initialData: Uint8Array | null;
+  progressiveDone: boolean;
+  length: number;
+  contentDispositionFilename: string | null;
+  transportReady(listener: (args: TransportEvent) => void): void;
+  requestDataRange(begin: number, end: number): void;
+  abort(): void;
+}
+
+interface PDFDataTransportSource {
+  pdfDataRangeTransport: PDFDataRangeTransport;
+  disableRange?: boolean;
+  disableStream?: boolean;
+}
+
+function getArrayBuffer(val: ArrayBuffer | Uint8Array): ArrayBuffer {
   // Prevent any possible issues by only transferring a Uint8Array that
   // completely "utilizes" its underlying ArrayBuffer.
   return val instanceof Uint8Array && val.byteLength === val.buffer.byteLength
-    ? val.buffer
-    : new Uint8Array(val).buffer;
+    ? (val.buffer as ArrayBuffer)
+    : (new Uint8Array(val).buffer as ArrayBuffer);
 }
 
-function endRequests() {
+function endRequests(this: { _requests: ReadCapability[] }): void {
   for (const capability of this._requests) {
     capability.resolve({ value: undefined, done: true });
   }
@@ -39,11 +60,15 @@ function endRequests() {
 }
 
 class PDFDataTransportStream extends BasePDFStream {
+  declare _source: PDFDataTransportSource;
+
+  declare _fullReader: PDFDataTransportStreamReader | null;
+
   _progressiveDone = false;
 
-  _queuedChunks = [];
+  _queuedChunks: ArrayBuffer[] | null = [];
 
-  constructor(source) {
+  constructor(source: PDFDataTransportSource) {
     super(
       source,
       PDFDataTransportStreamReader,
@@ -52,13 +77,13 @@ class PDFDataTransportStream extends BasePDFStream {
     const { pdfDataRangeTransport } = source;
     const { initialData, progressiveDone } = pdfDataRangeTransport;
 
-    if (initialData?.length > 0) {
+    if (initialData && initialData.length > 0) {
       const buffer = getArrayBuffer(initialData);
-      this._queuedChunks.push(buffer);
+      this._queuedChunks!.push(buffer);
     }
     this._progressiveDone = progressiveDone;
 
-    const listener = args => {
+    const listener = (args: TransportEvent) => {
       switch (args.type) {
         case "range":
         case "progressiveRead":
@@ -73,19 +98,19 @@ class PDFDataTransportStream extends BasePDFStream {
     pdfDataRangeTransport.transportReady(listener);
   }
 
-  #onReceiveData(begin, chunk) {
+  #onReceiveData(begin: number | undefined, chunk: ArrayBuffer) {
     const buffer = getArrayBuffer(chunk);
 
     if (begin === undefined) {
       if (this._fullReader) {
         this._fullReader._enqueue(buffer);
       } else {
-        this._queuedChunks.push(buffer);
+        this._queuedChunks!.push(buffer);
       }
     } else {
-      const rangeReader = this._rangeReaders
-        .keys()
-        .find(r => r._begin === begin);
+      const rangeReader = [...this._rangeReaders].find(
+        r => (r as PDFDataTransportStreamRangeReader)._begin === begin
+      ) as PDFDataTransportStreamRangeReader | undefined;
 
       assert(
         rangeReader,
@@ -101,8 +126,8 @@ class PDFDataTransportStream extends BasePDFStream {
     return reader;
   }
 
-  getRangeReader(begin, end) {
-    const reader = super.getRangeReader(begin, end);
+  getRangeReader(begin: number, end: number) {
+    const reader = super.getRangeReader(begin, end) as PDFDataTransportStreamRangeReader | null;
 
     if (reader) {
       reader.onDone = () => this._rangeReaders.delete(reader);
@@ -112,7 +137,7 @@ class PDFDataTransportStream extends BasePDFStream {
     return reader;
   }
 
-  cancelAllRequests(reason) {
+  cancelAllRequests(reason: unknown) {
     super.cancelAllRequests(reason);
 
     this._source.pdfDataRangeTransport.abort();
@@ -120,25 +145,26 @@ class PDFDataTransportStream extends BasePDFStream {
 }
 
 class PDFDataTransportStreamReader extends BasePDFStreamReader {
-  #endRequests = endRequests.bind(this);
+  #endRequests = endRequests.bind(this) as () => void;
 
   _done = false;
 
-  _queuedChunks = null;
+  _queuedChunks: ArrayBuffer[] | null = null;
 
-  _requests = [];
+  _requests: ReadCapability[] = [];
 
-  constructor(stream) {
+  constructor(stream: BasePDFStream) {
     super(stream);
+    const transportStream = stream as PDFDataTransportStream;
     const { pdfDataRangeTransport, disableRange, disableStream } =
-      stream._source;
+      transportStream._source;
     const { length, contentDispositionFilename } = pdfDataRangeTransport;
 
-    this._queuedChunks = stream._queuedChunks || [];
+    this._queuedChunks = transportStream._queuedChunks || [];
     for (const chunk of this._queuedChunks) {
       this._loaded += chunk.byteLength;
     }
-    this._done = stream._progressiveDone;
+    this._done = transportStream._progressiveDone;
 
     this._contentLength = length;
     this._isStreamingSupported = !disableStream;
@@ -160,34 +186,34 @@ class PDFDataTransportStreamReader extends BasePDFStreamReader {
     });
   }
 
-  _enqueue(chunk) {
+  _enqueue(chunk: ArrayBuffer) {
     if (this._done) {
       return; // Ignore new data.
     }
     if (this._requests.length > 0) {
-      const capability = this._requests.shift();
+      const capability = this._requests.shift()!;
       capability.resolve({ value: chunk, done: false });
     } else {
-      this._queuedChunks.push(chunk);
+      this._queuedChunks!.push(chunk);
     }
     this._loaded += chunk.byteLength;
     this._callOnProgress();
   }
 
-  async read() {
-    if (this._queuedChunks.length > 0) {
-      const chunk = this._queuedChunks.shift();
+  async read(): Promise<ReadResult> {
+    if (this._queuedChunks!.length > 0) {
+      const chunk = this._queuedChunks!.shift()!;
       return { value: chunk, done: false };
     }
     if (this._done) {
       return { value: undefined, done: true };
     }
-    const capability = Promise.withResolvers();
+    const capability = Promise.withResolvers<ReadResult>();
     this._requests.push(capability);
     return capability.promise;
   }
 
-  cancel(reason) {
+  cancel(_reason: unknown) {
     this._done = true;
     this.#endRequests();
   }
@@ -195,38 +221,38 @@ class PDFDataTransportStreamReader extends BasePDFStreamReader {
   progressiveDone() {
     this._done ||= true;
 
-    if (this._queuedChunks.length === 0) {
+    if (this._queuedChunks!.length === 0) {
       this.#endRequests();
     }
   }
 }
 
 class PDFDataTransportStreamRangeReader extends BasePDFStreamRangeReader {
-  #endRequests = endRequests.bind(this);
+  #endRequests = endRequests.bind(this) as () => void;
 
-  onDone = null;
+  onDone: (() => void) | null = null;
 
   _begin = -1;
 
   _done = false;
 
-  _queuedChunk = null;
+  _queuedChunk: ArrayBuffer | null = null;
 
-  _requests = [];
+  _requests: ReadCapability[] = [];
 
-  constructor(stream, begin, end) {
+  constructor(stream: BasePDFStream, begin: number, end: number) {
     super(stream, begin, end);
     this._begin = begin;
   }
 
-  _enqueue(chunk) {
+  _enqueue(chunk: ArrayBuffer) {
     if (this._done) {
       return; // ignore new data
     }
     if (this._requests.length === 0) {
       this._queuedChunk = chunk;
     } else {
-      const capability = this._requests.shift();
+      const capability = this._requests.shift()!;
       capability.resolve({ value: chunk, done: false });
 
       this.#endRequests();
@@ -235,7 +261,7 @@ class PDFDataTransportStreamRangeReader extends BasePDFStreamRangeReader {
     this.onDone?.();
   }
 
-  async read() {
+  async read(): Promise<ReadResult> {
     if (this._queuedChunk) {
       const chunk = this._queuedChunk;
       this._queuedChunk = null;
@@ -244,12 +270,12 @@ class PDFDataTransportStreamRangeReader extends BasePDFStreamRangeReader {
     if (this._done) {
       return { value: undefined, done: true };
     }
-    const capability = Promise.withResolvers();
+    const capability = Promise.withResolvers<ReadResult>();
     this._requests.push(capability);
     return capability.promise;
   }
 
-  cancel(reason) {
+  cancel(_reason: unknown) {
     this._done = true;
     this.#endRequests();
     this.onDone?.();

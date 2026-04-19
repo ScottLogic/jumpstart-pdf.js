@@ -13,46 +13,41 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { RenderableView, RenderingStates } from "./renderable_view.js";
 import { RenderingCancelledException } from "pdfjs-lib";
 
 class BasePDFPageView extends RenderableView {
-  #loadingId = null;
+  #loadingId: ReturnType<typeof setTimeout> | null = null;
+  #renderError: unknown = null;
+  #renderingState: number = RenderingStates.INITIAL;
+  #showCanvas: ((isLastShow: boolean) => void) | null = null;
+  #startTime: number = 0;
+  #tempCanvas: HTMLCanvasElement | null = null;
 
-  #renderError = null;
+  canvas: HTMLCanvasElement | null = null;
+  div: HTMLDivElement | null = null;
+  enableOptimizedPartialRendering: boolean = false;
+  imagesRightClickMinSize: number = -1;
+  eventBus: any = null;
+  id: number | null = null;
+  imageCoordinates: any = null;
+  pageColors: any = null;
+  recordedBBoxes: any = null;
+  renderingQueue: any = null;
+  minDurationToUpdateCanvas: number = 500;
+  declare pdfPage: any;
+  declare renderTask: any;
+  resume: (() => void) | null = null;
 
-  #renderingState = RenderingStates.INITIAL;
-
-  #showCanvas = null;
-
-  #startTime = 0;
-
-  #tempCanvas = null;
-
-  canvas = null;
-
-  /** @type {null | HTMLDivElement} */
-  div = null;
-
-  enableOptimizedPartialRendering = false;
-
-  imagesRightClickMinSize = -1;
-
-  eventBus = null;
-
-  id = null;
-
-  imageCoordinates = null;
-
-  pageColors = null;
-
-  recordedBBoxes = null;
-
-  renderingQueue = null;
-
-  constructor(options) {
+  constructor(options: {
+    eventBus: any;
+    id: number;
+    pageColors?: any;
+    renderingQueue?: any;
+    enableOptimizedPartialRendering?: boolean;
+    imagesRightClickMinSize?: number;
+    minDurationToUpdateCanvas?: number;
+  }) {
     super();
     this.eventBus = options.eventBus;
     this.id = options.id;
@@ -81,32 +76,32 @@ class BasePDFPageView extends RenderableView {
 
     switch (state) {
       case RenderingStates.PAUSED:
-        this.div.classList.remove("loading");
+        this.div!.classList.remove("loading");
         // Display the canvas as it has been drawn.
         this.#startTime = 0;
         this.#showCanvas?.(false);
         break;
       case RenderingStates.RUNNING:
-        this.div.classList.add("loadingIcon");
+        this.div!.classList.add("loadingIcon");
         this.#loadingId = setTimeout(() => {
           // Adding the loading class is slightly postponed in order to not have
           // it with loadingIcon.
           // If we don't do that the visibility of the background is changed but
           // the transition isn't triggered.
-          this.div.classList.add("loading");
+          this.div!.classList.add("loading");
           this.#loadingId = null;
         }, 0);
         this.#startTime = Date.now();
         break;
       case RenderingStates.INITIAL:
       case RenderingStates.FINISHED:
-        this.div.classList.remove("loadingIcon", "loading");
+        this.div!.classList.remove("loadingIcon", "loading");
         this.#startTime = 0;
         break;
     }
   }
 
-  _createCanvas(onShow, hideUntilComplete = false) {
+  _createCanvas(onShow: (canvas: HTMLCanvasElement) => void, hideUntilComplete = false): { canvas: HTMLCanvasElement; prevCanvas: HTMLCanvasElement | null } {
     const { pageColors } = this;
     const hasHCM = !!(pageColors?.background && pageColors?.foreground);
     const prevCanvas = this.canvas;
@@ -133,7 +128,7 @@ class BasePDFPageView extends RenderableView {
           }
           if (!tempCanvas) {
             tempCanvas = this.#tempCanvas = canvas;
-            canvas = this.canvas = canvas.cloneNode(false);
+            canvas = this.canvas = canvas.cloneNode(false) as HTMLCanvasElement;
             onShow(canvas);
           }
         }
@@ -142,7 +137,7 @@ class BasePDFPageView extends RenderableView {
           const ctx = canvas.getContext("2d", {
             alpha: false,
           });
-          ctx.drawImage(tempCanvas, 0, 0);
+          ctx!.drawImage(tempCanvas, 0, 0);
           if (isLastShow) {
             this.#resetTempCanvas();
           } else {
@@ -173,7 +168,7 @@ class BasePDFPageView extends RenderableView {
     return { canvas, prevCanvas };
   }
 
-  #renderContinueCallback = cont => {
+  #renderContinueCallback = (cont: () => void) => {
     this.#showCanvas?.(false);
     if (this.renderingQueue && !this.renderingQueue.isHighestPriority(this)) {
       this.renderingState = RenderingStates.PAUSED;
@@ -186,7 +181,7 @@ class BasePDFPageView extends RenderableView {
     cont();
   };
 
-  _resetCanvas() {
+  _resetCanvas(): void {
     const { canvas } = this;
     if (!canvas) {
       return;
@@ -197,24 +192,24 @@ class BasePDFPageView extends RenderableView {
     this.#resetTempCanvas();
   }
 
-  #resetTempCanvas() {
+  #resetTempCanvas(): void {
     if (this.#tempCanvas) {
       this.#tempCanvas.width = this.#tempCanvas.height = 0;
       this.#tempCanvas = null;
     }
   }
 
-  async _drawCanvas(options, onCancel, onFinish) {
+  async _drawCanvas(options: any, onCancel: () => void, onFinish: (renderTask: any) => void): Promise<void> {
     const renderTask = (this.renderTask = this.pdfPage.render(options));
     renderTask.onContinue = this.#renderContinueCallback;
-    renderTask.onError = error => {
+    renderTask.onError = (error: unknown) => {
       if (error instanceof RenderingCancelledException) {
         onCancel();
         this.#renderError = null;
       }
     };
 
-    let error = null;
+    let error: unknown = null;
     try {
       await renderTask.promise;
       this.#showCanvas?.(true);
@@ -253,7 +248,7 @@ class BasePDFPageView extends RenderableView {
     }
   }
 
-  cancelRendering({ cancelExtraDelay = 0 } = {}) {
+  cancelRendering({ cancelExtraDelay = 0 } = {}): void {
     if (this.renderTask) {
       this.renderTask.cancel(cancelExtraDelay);
       this.renderTask = null;
@@ -261,14 +256,14 @@ class BasePDFPageView extends RenderableView {
     this.resume = null;
   }
 
-  dispatchPageRender() {
+  dispatchPageRender(): void {
     this.eventBus.dispatch("pagerender", {
       source: this,
       pageNumber: this.id,
     });
   }
 
-  dispatchPageRendered(cssTransform, isDetailView) {
+  dispatchPageRendered(cssTransform: boolean, isDetailView: boolean): void {
     this.eventBus.dispatch("pagerendered", {
       source: this,
       pageNumber: this.id,

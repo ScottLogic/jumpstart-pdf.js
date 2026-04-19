@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 const DEFAULT_SCALE_VALUE = "auto";
 const DEFAULT_SCALE = 1.0;
 const DEFAULT_SCALE_DELTA = 1.1;
@@ -71,6 +69,34 @@ const CursorTool = {
 // Used by `PDFViewerApplication`, and by the API unit-tests.
 const AutoPrintRegExp = /\bprint\s*\(/;
 
+type WatchScrollState = {
+  right: boolean;
+  down: boolean;
+  lastX: number;
+  lastY: number;
+  _eventHandler: (evt: Event) => void;
+};
+
+interface ViewWithDiv {
+  div: HTMLElement;
+  id: number;
+}
+
+interface VisibleView<T extends ViewWithDiv> {
+  id: number;
+  x: number;
+  y: number;
+  visibleArea: {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+  } | null;
+  view: T;
+  percent: number;
+  widthPercent: number;
+}
+
 /**
  * Scrolls specified element into view of its parent.
  * @param {HTMLElement} element - The element to be visible.
@@ -79,11 +105,14 @@ const AutoPrintRegExp = /\bprint\s*\(/;
  * @param {number} [spot.left]
  * @param {number} [spot.top]
  */
-function scrollIntoView(element, spot) {
+function scrollIntoView(
+  element: HTMLElement,
+  spot?: { top?: number; left?: number }
+): void {
   // Assuming offsetParent is available (it's not available when viewer is in
   // hidden iframe or object). We have to scroll: if the offsetParent is not set
   // producing the error. See also animationStarted.
-  let parent = element.offsetParent;
+  let parent = element.offsetParent as HTMLElement | null;
   if (!parent) {
     console.error("offsetParent is not set -- cannot scroll");
     return;
@@ -97,7 +126,7 @@ function scrollIntoView(element, spot) {
     offsetY += parent.offsetTop;
     offsetX += parent.offsetLeft;
 
-    parent = parent.offsetParent;
+    parent = parent.offsetParent as HTMLElement | null;
     if (!parent) {
       return; // no need to scroll
     }
@@ -118,8 +147,12 @@ function scrollIntoView(element, spot) {
  * Helper function to start monitoring the scroll event and converting them into
  * PDF.js friendly one: with scroll debounce and scroll direction.
  */
-function watchScroll(viewAreaElement, callback, abortSignal = undefined) {
-  const debounceScroll = function (evt) {
+function watchScroll(
+  viewAreaElement: HTMLElement,
+  callback: (state: WatchScrollState) => void,
+  abortSignal?: AbortSignal
+): WatchScrollState {
+  const debounceScroll = function (_evt: Event) {
     if (rAF) {
       return;
     }
@@ -143,7 +176,7 @@ function watchScroll(viewAreaElement, callback, abortSignal = undefined) {
     });
   };
 
-  const state = {
+  const state: WatchScrollState = {
     right: true,
     down: true,
     lastX: viewAreaElement.scrollLeft,
@@ -151,14 +184,14 @@ function watchScroll(viewAreaElement, callback, abortSignal = undefined) {
     _eventHandler: debounceScroll,
   };
 
-  let rAF = null;
+  let rAF: number | null = null;
   viewAreaElement.addEventListener("scroll", debounceScroll, {
-    useCapture: true,
+    capture: true,
     signal: abortSignal,
   });
   abortSignal?.addEventListener(
     "abort",
-    () => window.cancelAnimationFrame(rAF),
+    () => window.cancelAnimationFrame(rAF!),
     { once: true }
   );
   return state;
@@ -169,8 +202,8 @@ function watchScroll(viewAreaElement, callback, abortSignal = undefined) {
  * @param {string} query
  * @returns {Map}
  */
-function parseQueryString(query) {
-  const params = new Map();
+function parseQueryString(query: string): Map<string, string> {
+  const params = new Map<string, string>();
   for (const [key, value] of new URLSearchParams(query)) {
     params.set(key.toLowerCase(), value);
   }
@@ -183,7 +216,7 @@ const InvisibleCharsRegExp = /[\x00-\x1F]/g;
  * @param {string} str
  * @param {boolean} [replaceInvisible]
  */
-function removeNullCharacters(str, replaceInvisible = false) {
+function removeNullCharacters(str: string, replaceInvisible = false): string {
   if (!InvisibleCharsRegExp.test(str)) {
     return str;
   }
@@ -202,7 +235,11 @@ function removeNullCharacters(str, replaceInvisible = false) {
  * @returns {number} Index of the first array element to pass the test,
  *                   or |items.length| if no such element exists.
  */
-function binarySearchFirstItem(items, condition, start = 0) {
+function binarySearchFirstItem<T>(
+  items: ArrayLike<T>,
+  condition: (item: T) => boolean,
+  start = 0
+): number {
   let minIndex = start;
   let maxIndex = items.length - 1;
 
@@ -233,7 +270,7 @@ function binarySearchFirstItem(items, condition, start = 0) {
  *                   the second one is a denominator.
  *                   They are both natural numbers.
  */
-function approximateFraction(x) {
+function approximateFraction(x: number): [number, number] {
   // Fast paths for int numbers or their inversions.
   if (Math.floor(x) === x) {
     return [x, 1];
@@ -268,7 +305,7 @@ function approximateFraction(x) {
       b = q;
     }
   }
-  let result;
+  let result: [number, number];
   // Select closest of the neighbours to x.
   if (x_ - a / b < c / d - x_) {
     result = x_ === x ? [a, b] : [b, a];
@@ -282,7 +319,7 @@ function approximateFraction(x) {
  * @param {number} x - A positive number to round to a multiple of `div`.
  * @param {number} div - A natural number.
  */
-function floorToDivide(x, div) {
+function floorToDivide(x: number, div: number): number {
   return x - (x % div);
 }
 
@@ -304,7 +341,15 @@ function floorToDivide(x, div) {
  * @param {GetPageSizeInchesParameters} params
  * @returns {PageSize}
  */
-function getPageSizeInches({ view, userUnit, rotate }) {
+function getPageSizeInches({
+  view,
+  userUnit,
+  rotate,
+}: {
+  view: number[];
+  userUnit: number;
+  rotate: number;
+}): { width: number; height: number } {
   const [x1, y1, x2, y2] = view;
   // We need to take the page rotation into account as well.
   const changeOrientation = rotate % 180 !== 0;
@@ -329,7 +374,11 @@ function getPageSizeInches({ view, userUnit, rotate }) {
  *   this will be the first element in the first partially visible row in
  *   `views`, although sometimes it goes back one row further.)
  */
-function backtrackBeforeAllVisibleElements(index, views, top) {
+function backtrackBeforeAllVisibleElements(
+  index: number,
+  views: Array<{ div: HTMLElement }>,
+  top: number
+): number {
   // binarySearchFirstItem's assumption is that the input is ordered, with only
   // one index where the conditions flips from false to true: [false ...,
   // true...]. With vertical scrolling and spreads, it is possible to have
@@ -438,13 +487,24 @@ function backtrackBeforeAllVisibleElements(index, views, top) {
  * @param {GetVisibleElementsParameters} params
  * @returns {Object} `{ first, last, views: [{ id, x, y, view, percent }] }`
  */
-function getVisibleElements({
+function getVisibleElements<T extends ViewWithDiv>({
   scrollEl,
   views,
   sortByVisibility = false,
   horizontal = false,
   rtl = false,
-}) {
+}: {
+  scrollEl: HTMLElement;
+  views: T[];
+  sortByVisibility?: boolean;
+  horizontal?: boolean;
+  rtl?: boolean;
+}): {
+  first: VisibleView<T> | undefined;
+  last: VisibleView<T> | undefined;
+  views: VisibleView<T>[];
+  ids: Set<number>;
+} {
   const top = scrollEl.scrollTop,
     bottom = top + scrollEl.clientHeight;
   const left = scrollEl.scrollLeft,
@@ -460,21 +520,21 @@ function getVisibleElements({
   // offsetLeft/Top (which includes margin) and adding clientLeft/Top (which is
   // the border). Adding clientWidth/Height gets us the bottom-right corner of
   // the padding edge.
-  function isElementBottomAfterViewTop(view) {
+  function isElementBottomAfterViewTop(view: T) {
     const element = view.div;
     const elementBottom =
       element.offsetTop + element.clientTop + element.clientHeight;
     return elementBottom > top;
   }
-  function isElementNextAfterViewHorizontally(view) {
+  function isElementNextAfterViewHorizontally(view: T) {
     const element = view.div;
     const elementLeft = element.offsetLeft + element.clientLeft;
     const elementRight = elementLeft + element.clientWidth;
     return rtl ? elementLeft < right : elementRight > left;
   }
 
-  const visible = [],
-    ids = new Set(),
+  const visible: VisibleView<T>[] = [],
+    ids = new Set<number>(),
     numViews = views.length;
   let firstVisibleElementInd = binarySearchFirstItem(
     views,
@@ -591,7 +651,7 @@ function getVisibleElements({
   return { first, last, views: visible, ids };
 }
 
-function normalizeWheelEventDirection(evt) {
+function normalizeWheelEventDirection(evt: WheelEvent): number {
   let delta = Math.hypot(evt.deltaX, evt.deltaY);
   const angle = Math.atan2(evt.deltaY, evt.deltaX);
   if (-0.25 * Math.PI < angle && angle < 0.75 * Math.PI) {
@@ -601,7 +661,7 @@ function normalizeWheelEventDirection(evt) {
   return delta;
 }
 
-function normalizeWheelEventDelta(evt) {
+function normalizeWheelEventDelta(evt: WheelEvent): number {
   const deltaMode = evt.deltaMode; // Avoid being affected by bug 1392460.
   let delta = normalizeWheelEventDirection(evt);
 
@@ -617,34 +677,34 @@ function normalizeWheelEventDelta(evt) {
   return delta;
 }
 
-function isValidRotation(angle) {
-  return Number.isInteger(angle) && angle % 90 === 0;
+function isValidRotation(angle: unknown): boolean {
+  return Number.isInteger(angle) && (angle as number) % 90 === 0;
 }
 
-function isValidScrollMode(mode) {
+function isValidScrollMode(mode: unknown): boolean {
   return (
     Number.isInteger(mode) &&
-    Object.values(ScrollMode).includes(mode) &&
+    (Object.values(ScrollMode) as unknown[]).includes(mode) &&
     mode !== ScrollMode.UNKNOWN
   );
 }
 
-function isValidSpreadMode(mode) {
+function isValidSpreadMode(mode: unknown): boolean {
   return (
     Number.isInteger(mode) &&
-    Object.values(SpreadMode).includes(mode) &&
+    (Object.values(SpreadMode) as unknown[]).includes(mode) &&
     mode !== SpreadMode.UNKNOWN
   );
 }
 
-function isPortraitOrientation(size) {
+function isPortraitOrientation(size: { width: number; height: number }): boolean {
   return size.width <= size.height;
 }
 
 /**
  * Promise that is resolved when DOM window becomes visible.
  */
-const animationStarted = new Promise(function (resolve) {
+const animationStarted = new Promise<void>(function (resolve) {
   if (
     typeof PDFJSDev !== "undefined" &&
     PDFJSDev.test("LIB") &&
@@ -655,7 +715,7 @@ const animationStarted = new Promise(function (resolve) {
     setTimeout(resolve, 20);
     return;
   }
-  window.requestAnimationFrame(resolve);
+  window.requestAnimationFrame(() => resolve());
 });
 
 const docStyle =
@@ -666,26 +726,26 @@ const docStyle =
     : document.documentElement.style;
 
 class ProgressBar {
-  #classList = null;
+  #classList!: DOMTokenList;
 
-  #disableAutoFetchTimeout = null;
+  #disableAutoFetchTimeout: ReturnType<typeof setTimeout> | null = null;
 
   #percent = 0;
 
-  #style = null;
+  #style!: CSSStyleDeclaration;
 
   #visible = true;
 
-  constructor(bar) {
+  constructor(bar: HTMLElement) {
     this.#classList = bar.classList;
     this.#style = bar.style;
   }
 
-  get percent() {
+  get percent(): number {
     return this.#percent;
   }
 
-  set percent(val) {
+  set percent(val: number) {
     this.#percent = val;
 
     if (isNaN(val)) {
@@ -697,11 +757,14 @@ class ProgressBar {
     this.#style.setProperty("--progressBar-percent", `${this.#percent}%`);
   }
 
-  setWidth(viewer) {
+  setWidth(viewer: HTMLElement | null): void {
     if (!viewer) {
       return;
     }
-    const container = viewer.parentNode;
+    const container = viewer.parentNode as HTMLElement | null;
+    if (!container) {
+      return;
+    }
     const scrollbarWidth = container.offsetWidth - viewer.offsetWidth;
     if (scrollbarWidth > 0) {
       this.#style.setProperty(
@@ -711,7 +774,7 @@ class ProgressBar {
     }
   }
 
-  setDisableAutoFetch(delay = /* ms = */ 5000) {
+  setDisableAutoFetch(delay = /* ms = */ 5000): void {
     if (this.#percent === 100 || isNaN(this.#percent)) {
       return;
     }
@@ -726,7 +789,7 @@ class ProgressBar {
     }, delay);
   }
 
-  hide() {
+  hide(): void {
     if (!this.#visible) {
       return;
     }
@@ -734,7 +797,7 @@ class ProgressBar {
     this.#classList.add("hidden");
   }
 
-  show() {
+  show(): void {
     if (this.#visible) {
       return;
     }
@@ -751,9 +814,9 @@ class ProgressBar {
  *
  * @returns {Element} the truly active or focused element.
  */
-function getActiveOrFocusedElement() {
-  let curRoot = document;
-  let curActiveOrFocused =
+function getActiveOrFocusedElement(): Element | null {
+  let curRoot: Document | ShadowRoot = document;
+  let curActiveOrFocused: Element | null =
     curRoot.activeElement || curRoot.querySelector(":focus");
 
   while (curActiveOrFocused?.shadowRoot) {
@@ -770,7 +833,10 @@ function getActiveOrFocusedElement() {
  * @param {string} layout - The API PageLayout value.
  * @returns {Object}
  */
-function apiPageLayoutToViewerModes(layout) {
+function apiPageLayoutToViewerModes(layout: string): {
+  scrollMode: number;
+  spreadMode: number;
+} {
   let scrollMode = ScrollMode.VERTICAL,
     spreadMode = SpreadMode.NONE;
 
@@ -804,7 +870,7 @@ function apiPageLayoutToViewerModes(layout) {
  * @param {string} mode - The API PageMode value.
  * @returns {number} A value from {SidebarView}.
  */
-function apiPageModeToSidebarView(mode) {
+function apiPageModeToSidebarView(mode: string): number {
   switch (mode) {
     case "UseNone":
       return SidebarView.NONE;
@@ -820,23 +886,35 @@ function apiPageModeToSidebarView(mode) {
   return SidebarView.NONE; // Default value.
 }
 
-function toggleCheckedBtn(button, toggle, view = null) {
+function toggleCheckedBtn(
+  button: HTMLElement,
+  toggle: boolean,
+  view: HTMLElement | null = null
+): void {
   button.classList.toggle("toggled", toggle);
-  button.setAttribute("aria-checked", toggle);
+  button.setAttribute("aria-checked", String(toggle));
 
   view?.classList.toggle("hidden", !toggle);
 }
 
-function toggleSelectedBtn(button, toggle, view = null) {
+function toggleSelectedBtn(
+  button: HTMLElement,
+  toggle: boolean,
+  view: HTMLElement | null = null
+): void {
   button.classList.toggle("selected", toggle);
-  button.setAttribute("aria-selected", toggle);
+  button.setAttribute("aria-selected", String(toggle));
 
   view?.classList.toggle("hidden", !toggle);
 }
 
-function toggleExpandedBtn(button, toggle, view = null) {
+function toggleExpandedBtn(
+  button: HTMLElement,
+  toggle: boolean,
+  view: HTMLElement | null = null
+): void {
   button.classList.toggle("toggled", toggle);
-  button.setAttribute("aria-expanded", toggle);
+  button.setAttribute("aria-expanded", String(toggle));
 
   view?.classList.toggle("hidden", !toggle);
 }
@@ -844,7 +922,7 @@ function toggleExpandedBtn(button, toggle, view = null) {
 // In Firefox, the css calc function uses f32 precision but the Chrome or Safari
 // are using f64 one. So in order to have the same rendering in all browsers, we
 // need to use the right precision in order to have correct dimensions.
-const calcRound =
+const calcRound: (x: number) => number =
   typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")
     ? Math.fround
     : (function () {
@@ -853,11 +931,11 @@ const calcRound =
           PDFJSDev.test("LIB") &&
           typeof document === "undefined"
         ) {
-          return x => x;
+          return (x: number) => x;
         }
         const e = document.createElement("div");
         e.style.width = "round(down, calc(1.6666666666666665 * 792px), 1px)";
-        return e.style.width === "calc(1320px)" ? Math.fround : x => x;
+        return e.style.width === "calc(1320px)" ? Math.fround : (x: number) => x;
       })();
 
 export {

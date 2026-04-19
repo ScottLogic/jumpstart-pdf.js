@@ -13,9 +13,12 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
-/** @typedef {import("./api").TextContent} TextContent */
+interface XFANode {
+  name: string;
+  value?: string;
+  attributes?: Record<string, string | undefined>;
+  children?: XFANode[];
+}
 
 class XfaText {
   /**
@@ -27,13 +30,13 @@ class XfaText {
    *
    * @returns {TextContent}
    */
-  static textContent(xfa) {
-    const items = [];
+  static textContent(xfa: XFANode | null) {
+    const items: { str: string }[] = [];
     const output = {
       items,
       styles: Object.create(null),
     };
-    function walk(node) {
+    function walk(node: XFANode | null | undefined) {
       if (!node) {
         return;
       }
@@ -48,7 +51,7 @@ class XfaText {
       } else if (node.value) {
         str = node.value;
       }
-      if (str !== null) {
+      if (str != null) {
         items.push({
           str,
         });
@@ -70,7 +73,7 @@ class XfaText {
    * @returns {boolean} true if the DOM node should have a corresponding text
    * node.
    */
-  static shouldBuildText(name) {
+  static shouldBuildText(name: string): boolean {
     return !(
       name === "textarea" ||
       name === "input" ||

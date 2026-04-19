@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import {
   BaseException,
   DrawOPS,
@@ -37,10 +35,10 @@ class PixelsPerInch {
   static PDF_TO_CSS_UNITS = this.CSS / this.PDF;
 }
 
-async function fetchData(url, type = "text") {
+async function fetchData(url: URL | string, type = "text"): Promise<any> {
   if (
     (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) ||
-    isValidFetchUrl(url, document.baseURI)
+    isValidFetchUrl(String(url), document.baseURI)
   ) {
     const response = await fetch(url);
     if (!response.ok) {
@@ -60,8 +58,10 @@ async function fetchData(url, type = "text") {
   // The Fetch API is not supported.
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
-    request.open("GET", url, /* async = */ true);
-    request.responseType = type === "bytes" ? "arraybuffer" : type;
+    request.open("GET", String(url), /* async = */ true);
+    request.responseType = (
+      type === "bytes" ? "arraybuffer" : type
+    ) as XMLHttpRequestResponseType;
 
     request.onreadystatechange = () => {
       if (request.readyState !== XMLHttpRequest.DONE) {
@@ -120,6 +120,24 @@ async function fetchData(url, type = "text") {
  * PDF page viewport created based on scale, rotation and offset.
  */
 class PageViewport {
+  declare viewBox: number[];
+
+  declare userUnit: number;
+
+  declare scale: number;
+
+  declare rotation: number;
+
+  declare offsetX: number;
+
+  declare offsetY: number;
+
+  declare transform: number[];
+
+  declare width: number;
+
+  declare height: number;
+
   /**
    * @param {PageViewportParameters}
    */
@@ -131,6 +149,14 @@ class PageViewport {
     offsetX = 0,
     offsetY = 0,
     dontFlip = false,
+  }: {
+    viewBox: number[];
+    userUnit: number;
+    scale: number;
+    rotation: number;
+    offsetX?: number;
+    offsetY?: number;
+    dontFlip?: boolean;
   }) {
     this.viewBox = viewBox;
     this.userUnit = userUnit;
@@ -242,6 +268,12 @@ class PageViewport {
     offsetX = this.offsetX,
     offsetY = this.offsetY,
     dontFlip = false,
+  }: {
+    scale?: number;
+    rotation?: number;
+    offsetX?: number;
+    offsetY?: number;
+    dontFlip?: boolean;
   } = {}) {
     return new PageViewport({
       viewBox: this.viewBox.slice(),
@@ -264,7 +296,7 @@ class PageViewport {
    * @see {@link convertToPdfPoint}
    * @see {@link convertToViewportRectangle}
    */
-  convertToViewportPoint(x, y) {
+  convertToViewportPoint(x: number, y: number) {
     const p = [x, y];
     Util.applyTransform(p, this.transform);
     return p;
@@ -277,7 +309,7 @@ class PageViewport {
    *   rectangle in the viewport coordinate space.
    * @see {@link convertToViewportPoint}
    */
-  convertToViewportRectangle(rect) {
+  convertToViewportRectangle(rect: number[]) {
     const topLeft = [rect[0], rect[1]];
     Util.applyTransform(topLeft, this.transform);
     const bottomRight = [rect[2], rect[3]];
@@ -294,7 +326,7 @@ class PageViewport {
    *   point in the PDF coordinate space.
    * @see {@link convertToViewportPoint}
    */
-  convertToPdfPoint(x, y) {
+  convertToPdfPoint(x: number, y: number) {
     const p = [x, y];
     Util.applyInverseTransform(p, this.transform);
     return p;
@@ -302,13 +334,15 @@ class PageViewport {
 }
 
 class RenderingCancelledException extends BaseException {
-  constructor(msg, extraDelay = 0) {
+  declare extraDelay: number;
+
+  constructor(msg: string, extraDelay = 0) {
     super(msg, "RenderingCancelledException");
     this.extraDelay = extraDelay;
   }
 }
 
-function isDataScheme(url) {
+function isDataScheme(url: string) {
   const ii = url.length;
   let i = 0;
   while (i < ii && url[i].trim() === "") {
@@ -317,7 +351,7 @@ function isDataScheme(url) {
   return url.substring(i, i + 5).toLowerCase() === "data:";
 }
 
-function isPdfFile(filename) {
+function isPdfFile(filename: unknown) {
   return typeof filename === "string" && /\.pdf$/i.test(filename);
 }
 
@@ -326,7 +360,7 @@ function isPdfFile(filename) {
  * @param {string} url
  * @returns {string}
  */
-function getFilenameFromUrl(url) {
+function getFilenameFromUrl(url: string) {
   [url] = url.split(/[#?]/, 1);
   return stripPath(url);
 }
@@ -338,7 +372,7 @@ function getFilenameFromUrl(url) {
  *   unknown, or the protocol is unsupported.
  * @returns {string} Guessed PDF filename.
  */
-function getPdfFilenameFromUrl(url, defaultFilename = "document.pdf") {
+function getPdfFilenameFromUrl(url: unknown, defaultFilename = "document.pdf") {
   if (typeof url !== "string") {
     return defaultFilename;
   }
@@ -347,7 +381,7 @@ function getPdfFilenameFromUrl(url, defaultFilename = "document.pdf") {
     return defaultFilename;
   }
 
-  const getURL = urlString => {
+  const getURL = (urlString: string) => {
     try {
       return new URL(urlString);
     } catch {
@@ -374,7 +408,7 @@ function getPdfFilenameFromUrl(url, defaultFilename = "document.pdf") {
     return defaultFilename;
   }
 
-  const decode = name => {
+  const decode = (name: string) => {
     try {
       let decoded = decodeURIComponent(name);
       if (decoded.includes("/")) {
@@ -396,7 +430,8 @@ function getPdfFilenameFromUrl(url, defaultFilename = "document.pdf") {
   }
 
   if (newURL.searchParams.size > 0) {
-    const getLast = iterator => [...iterator].findLast(v => pdfRegex.test(v));
+    const getLast = (iterator: Iterable<string>) =>
+      [...iterator].findLast(v => pdfRegex.test(v));
 
     // If any of the search parameters ends with ".pdf", return it.
     const name =
@@ -419,24 +454,24 @@ function getPdfFilenameFromUrl(url, defaultFilename = "document.pdf") {
 }
 
 class StatTimer {
-  #started = new Map();
+  #started = new Map<string, number>();
 
-  times = [];
+  times: { name: string; start: number; end: number }[] = [];
 
-  time(name) {
+  time(name: string) {
     if (this.#started.has(name)) {
       warn(`Timer is already running for ${name}`);
     }
     this.#started.set(name, Date.now());
   }
 
-  timeEnd(name) {
+  timeEnd(name: string) {
     if (!this.#started.has(name)) {
       warn(`Timer has not been started for ${name}`);
     }
     this.times.push({
       name,
-      start: this.#started.get(name),
+      start: this.#started.get(name)!,
       end: Date.now(),
     });
     // Remove timer from started so it can be called again.
@@ -453,7 +488,7 @@ class StatTimer {
   }
 }
 
-function isValidFetchUrl(url, baseUrl) {
+function isValidFetchUrl(url: string, baseUrl?: string) {
   if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) {
     throw new Error("Not implemented: isValidFetchUrl");
   }
@@ -465,23 +500,23 @@ function isValidFetchUrl(url, baseUrl) {
 /**
  * Event handler to suppress context menu.
  */
-function noContextMenu(e) {
+function noContextMenu(e: Event) {
   e.preventDefault();
 }
 
-function stopEvent(e) {
+function stopEvent(e: Event) {
   e.preventDefault();
   e.stopPropagation();
 }
 
 // Deprecated API function -- display regardless of the `verbosity` setting.
-function deprecated(details) {
+function deprecated(details: string) {
   // eslint-disable-next-line no-console
   console.log("Deprecated API usage: " + details);
 }
 
 class PDFDateString {
-  static #regex;
+  static #regex: RegExp | undefined;
 
   /**
    * Convert a PDF date string to a JavaScript `Date` object.
@@ -499,7 +534,7 @@ class PDFDateString {
    * @param {string} input
    * @returns {Date|null}
    */
-  static toDateObject(input) {
+  static toDateObject(input: string | Date | null | undefined) {
     if (input instanceof Date) {
       return input;
     }
@@ -569,7 +604,10 @@ class PDFDateString {
 /**
  * NOTE: This is (mostly) intended to support printing of XFA forms.
  */
-function getXfaPageViewport(xfaPage, { scale = 1, rotation = 0 }) {
+function getXfaPageViewport(
+  xfaPage: any,
+  { scale = 1, rotation = 0 }: { scale?: number; rotation?: number }
+) {
   const { width, height } = xfaPage.attributes.style;
   const viewBox = [0, 0, parseInt(width), parseInt(height)];
 
@@ -581,7 +619,7 @@ function getXfaPageViewport(xfaPage, { scale = 1, rotation = 0 }) {
   });
 }
 
-function getRGB(color) {
+function getRGB(color: string): number[] {
   if (color.startsWith("#")) {
     const colorRGB = parseInt(color.slice(1), 16);
     return [
@@ -610,7 +648,7 @@ function getRGB(color) {
   return [0, 0, 0];
 }
 
-function getColorValues(colors) {
+function getColorValues(colors: Map<string, number[]>) {
   const span = document.createElement("span");
   span.style.visibility = "hidden";
   // NOTE: The following does *not* affect `forced-colors: active` mode.
@@ -624,12 +662,12 @@ function getColorValues(colors) {
   span.remove();
 }
 
-function getCurrentTransform(ctx) {
+function getCurrentTransform(ctx: CanvasRenderingContext2D) {
   const { a, b, c, d, e, f } = ctx.getTransform();
   return [a, b, c, d, e, f];
 }
 
-function getCurrentTransformInverse(ctx) {
+function getCurrentTransformInverse(ctx: CanvasRenderingContext2D) {
   const { a, b, c, d, e, f } = ctx.getTransform().invertSelf();
   return [a, b, c, d, e, f];
 }
@@ -641,14 +679,14 @@ function getCurrentTransformInverse(ctx) {
  * @param {boolean} mustRotate
  */
 function setLayerDimensions(
-  div,
-  viewport,
+  div: Element,
+  viewport: PageViewport | { rotation: number },
   mustFlip = false,
   mustRotate = true
 ) {
   if (viewport instanceof PageViewport) {
     const { pageWidth, pageHeight } = viewport.rawDims;
-    const { style } = div;
+    const { style } = div as HTMLElement;
     const useRound = FeatureTest.isCSSRoundSupported;
 
     const w = `var(--total-scale-factor) * ${pageWidth}px`,
@@ -670,7 +708,7 @@ function setLayerDimensions(
   }
 
   if (mustRotate) {
-    div.setAttribute("data-main-rotation", viewport.rotation);
+    div.setAttribute("data-main-rotation", String(viewport.rotation));
   }
 }
 
@@ -678,17 +716,20 @@ function setLayerDimensions(
  * Scale factors for the canvas, necessary with HiDPI displays.
  */
 class OutputScale {
+  /**
+   * @type {number} Horizontal scale.
+   */
+  sx: number;
+
+  /**
+   * @type {number} Vertical scale.
+   */
+  sy: number;
+
   constructor() {
     const { pixelRatio } = OutputScale;
 
-    /**
-     * @type {number} Horizontal scale.
-     */
     this.sx = pixelRatio;
-
-    /**
-     * @type {number} Vertical scale.
-     */
     this.sy = pixelRatio;
   }
 
@@ -711,7 +752,13 @@ class OutputScale {
    * @returns {boolean} Returns `true` if scaling was limited,
    *   `false` otherwise.
    */
-  limitCanvas(width, height, maxPixels, maxDim, capAreaFactor = -1) {
+  limitCanvas(
+    width: number,
+    height: number,
+    maxPixels: number,
+    maxDim: number,
+    capAreaFactor = -1
+  ) {
     let maxAreaScale = Infinity,
       maxWidthScale = Infinity,
       maxHeightScale = Infinity;
@@ -738,7 +785,7 @@ class OutputScale {
     return globalThis.devicePixelRatio || 1;
   }
 
-  static capPixels(maxPixels, capAreaFactor) {
+  static capPixels(maxPixels: number, capAreaFactor: number) {
     if (capAreaFactor >= 0) {
       const winPixels = Math.ceil(
         (typeof PDFJSDev !== "undefined" && PDFJSDev.test("TESTING")
@@ -792,13 +839,13 @@ class CSSConstants {
   }
 }
 
-function applyOpacity(color, opacity) {
+function applyOpacity(color: number[], opacity: number | null | undefined) {
   opacity = MathClamp(opacity ?? 1, 0, 1);
   const white = 255 * (1 - opacity);
   return color.map(c => Math.round(c * opacity + white));
 }
 
-function RGBToHSL(rgb, output) {
+function RGBToHSL(rgb: ArrayLike<number>, output: Float32Array) {
   const r = rgb[0] / 255;
   const g = rgb[1] / 255;
   const b = rgb[2] / 255;
@@ -829,7 +876,7 @@ function RGBToHSL(rgb, output) {
   output[2] = l;
 }
 
-function HSLToRGB(hsl, output) {
+function HSLToRGB(hsl: Float32Array, output: Float32Array) {
   const h = hsl[0];
   const s = hsl[1];
   const l = hsl[2];
@@ -872,11 +919,11 @@ function HSLToRGB(hsl, output) {
   }
 }
 
-function computeLuminance(x) {
+function computeLuminance(x: number) {
   return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
 }
 
-function contrastRatio(hsl1, hsl2, output) {
+function contrastRatio(hsl1: Float32Array, hsl2: Float32Array, output: Float32Array) {
   HSLToRGB(hsl1, output);
   output.map(computeLuminance);
   const lum1 = 0.2126 * output[0] + 0.7152 * output[1] + 0.0722 * output[2];
@@ -889,7 +936,7 @@ function contrastRatio(hsl1, hsl2, output) {
 }
 
 // Cache for the findContrastColor function, to improve performance.
-const contrastCache = new Map();
+const contrastCache = new Map<number, string>();
 
 /**
  * Find a color that has sufficient contrast against a fixed color.
@@ -900,7 +947,7 @@ const contrastCache = new Map();
  * @param {Array<number>} fixedColor
  * @returns {string}
  */
-function findContrastColor(baseColor, fixedColor) {
+function findContrastColor(baseColor: number[], fixedColor: number[]) {
   const key =
     baseColor[0] +
     baseColor[1] * 0x100 +
@@ -940,7 +987,7 @@ function findContrastColor(baseColor, fixedColor) {
     }
     const PRECISION = 0.005;
     while (end - start > PRECISION) {
-      const mid = (baseHSL[2] = (start + end) / 2);
+      const mid: number = (baseHSL[2] = (start + end) / 2);
       if (
         isFixedColorDark ===
         contrastRatio(baseHSL, fixedHSL, output) < minContrast
@@ -963,7 +1010,14 @@ function findContrastColor(baseColor, fixedColor) {
   return cachedValue;
 }
 
-function renderRichText({ html, dir, className }, container) {
+function renderRichText(
+  {
+    html,
+    dir,
+    className,
+  }: { html: string | any; dir?: string; className: string },
+  container: Element | DocumentFragment
+) {
   const fragment = document.createDocumentFragment();
   if (typeof html === "string") {
     const p = document.createElement("p");
@@ -984,11 +1038,11 @@ function renderRichText({ html, dir, className }, container) {
       intent: "richText",
     });
   }
-  fragment.firstElementChild.classList.add("richText", className);
+  fragment.firstElementChild!.classList.add("richText", className);
   container.append(fragment);
 }
 
-function makePathFromDrawOPS(data) {
+function makePathFromDrawOPS(data: number[] | null | undefined) {
   // Using a SVG string is slightly slower than using the following loop.
   const path = new Path2D();
   if (!data) {

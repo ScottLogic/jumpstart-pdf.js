@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import {
   assert,
   FeatureTest,
@@ -26,13 +24,32 @@ import {
 } from "../shared/util.js";
 import { makePathFromDrawOPS } from "./display_utils.js";
 
+type LoadingRequest = {
+  done: boolean;
+  complete: () => void;
+  callback: () => void;
+};
+
 class FontLoader {
-  #systemFonts = new Set();
+  #systemFonts = new Set<string>();
+
+  declare _document: Document;
+
+  declare nativeFontFaces: Set<FontFace>;
+
+  declare styleElement: HTMLStyleElement | null;
+
+  declare loadingRequests: LoadingRequest[];
+
+  declare loadTestFontId: number;
 
   constructor({
-    ownerDocument = globalThis.document,
-    styleElement = null, // For testing only.
-  }) {
+    ownerDocument = globalThis.document as Document,
+    styleElement = null as HTMLStyleElement | null,
+  }: {
+    ownerDocument?: Document;
+    styleElement?: HTMLStyleElement | null;
+  } = {}) {
     this._document = ownerDocument;
 
     this.nativeFontFaces = new Set();
@@ -47,24 +64,24 @@ class FontLoader {
     }
   }
 
-  addNativeFontFace(nativeFontFace) {
+  addNativeFontFace(nativeFontFace: FontFace) {
     this.nativeFontFaces.add(nativeFontFace);
     this._document.fonts.add(nativeFontFace);
   }
 
-  removeNativeFontFace(nativeFontFace) {
+  removeNativeFontFace(nativeFontFace: FontFace) {
     this.nativeFontFaces.delete(nativeFontFace);
     this._document.fonts.delete(nativeFontFace);
   }
 
-  insertRule(rule) {
+  insertRule(rule: string) {
     if (!this.styleElement) {
       this.styleElement = this._document.createElement("style");
       this._document.documentElement
         .getElementsByTagName("head")[0]
         .append(this.styleElement);
     }
-    const styleSheet = this.styleElement.sheet;
+    const styleSheet = this.styleElement.sheet!;
     styleSheet.insertRule(rule, styleSheet.cssRules.length);
   }
 
@@ -86,6 +103,10 @@ class FontLoader {
     systemFontInfo: info,
     disableFontFace,
     _inspectFont,
+  }: {
+    systemFontInfo: any;
+    disableFontFace: boolean;
+    _inspectFont?: ((info: any) => void) | null;
   }) {
     if (!info || this.#systemFonts.has(info.loadedName)) {
       return;
@@ -118,7 +139,7 @@ class FontLoader {
     );
   }
 
-  async bind(font) {
+  async bind(font: any) {
     // Add the font to the DOM only once; skip if the font is already loaded.
     if (font.attached || (font.missingFile && !font.systemFontInfo)) {
       return;
@@ -158,7 +179,7 @@ class FontLoader {
       if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) {
         throw new Error("Not implemented: async font loading");
       }
-      await new Promise(resolve => {
+      await new Promise<void>(resolve => {
         const request = this._queueLoadingCallback(resolve);
         this._prepareFontLoadEvent(font, request);
       });
@@ -193,7 +214,7 @@ class FontLoader {
     );
   }
 
-  _queueLoadingCallback(callback) {
+  _queueLoadingCallback(callback: () => void): LoadingRequest {
     if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) {
       throw new Error("Not implemented: _queueLoadingCallback");
     }
@@ -204,7 +225,7 @@ class FontLoader {
 
       // Sending all completed requests in order of how they were queued.
       while (loadingRequests.length > 0 && loadingRequests[0].done) {
-        const otherRequest = loadingRequests.shift();
+        const otherRequest = loadingRequests.shift()!;
         setTimeout(otherRequest.callback, 0);
       }
     }
@@ -253,7 +274,7 @@ class FontLoader {
     return shadow(this, "_loadTestFont", testFont);
   }
 
-  _prepareFontLoadEvent(font, request) {
+  _prepareFontLoadEvent(font: any, request: LoadingRequest) {
     if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) {
       throw new Error("Not implemented: _prepareFontLoadEvent");
     }
@@ -264,7 +285,7 @@ class FontLoader {
     // It's assumed fonts are loaded in order, so add a known test font after
     // the desired fonts and then test for the loading of that test font.
 
-    function int32(data, offset) {
+    function int32(data: string, offset: number): number {
       return (
         (data.charCodeAt(offset) << 24) |
         (data.charCodeAt(offset + 1) << 16) |
@@ -272,21 +293,21 @@ class FontLoader {
         (data.charCodeAt(offset + 3) & 0xff)
       );
     }
-    function spliceString(s, offset, remove, insert) {
+    function spliceString(s: string, offset: number, remove: number, insert: string): string {
       const chunk1 = s.substring(0, offset);
       const chunk2 = s.substring(offset + remove);
       return chunk1 + insert + chunk2;
     }
-    let i, ii;
+    let i: number, ii: number;
 
     // The temporary canvas is used to determine if fonts are loaded.
     const canvas = this._document.createElement("canvas");
     canvas.width = 1;
     canvas.height = 1;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d")!;
 
     let called = 0;
-    function isFontReady(name, callback) {
+    function isFontReady(name: string, callback: () => void) {
       // With setTimeout clamping this gives the font ~100ms to load.
       if (++called > 30) {
         warn("Load test font never loaded.");
@@ -357,11 +378,15 @@ class FontLoader {
 }
 
 class FontFaceObject {
-  compiledGlyphs = Object.create(null);
+  compiledGlyphs: Record<string, any> = Object.create(null);
 
-  #fontData;
+  #fontData: any;
 
-  constructor(translatedData, inspectFont = null, charProcOperatorList, extra) {
+  declare _inspectFont: ((font: any, url?: string) => void) | null;
+
+  declare charProcOperatorList: any;
+
+  constructor(translatedData: any, inspectFont: ((font: any, url?: string) => void) | null = null, charProcOperatorList: any, extra: any) {
     if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
       assert(
         typeof translatedData.disableFontFace === "boolean",
@@ -391,7 +416,7 @@ class FontFaceObject {
     if (!this.cssFontInfo) {
       nativeFontFace = new FontFace(this.loadedName, this.data, {});
     } else {
-      const css = {
+      const css: { weight: any; style?: string } = {
         weight: this.cssFontInfo.fontWeight,
       };
       if (this.cssFontInfo.italicAngle) {
@@ -429,7 +454,7 @@ class FontFaceObject {
     return rule;
   }
 
-  getPathGenerator(objs, character) {
+  getPathGenerator(objs: any, character: any) {
     if (this.compiledGlyphs[character] !== undefined) {
       return this.compiledGlyphs[character];
     }

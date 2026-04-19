@@ -13,25 +13,23 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { ScrollMode, SpreadMode } from "./ui_utils.js";
 import { PDFViewer } from "./pdf_viewer.js";
 
 class PDFSinglePageViewer extends PDFViewer {
-  _resetView() {
+  override _resetView(): void {
     super._resetView();
-    this._scrollMode = ScrollMode.PAGE;
-    this._spreadMode = SpreadMode.NONE;
+    (this as any)._scrollMode = ScrollMode.PAGE;
+    (this as any)._spreadMode = SpreadMode.NONE;
   }
 
-  set scrollMode(mode) {}
+  set scrollMode(_mode: number) {}
 
-  _updateScrollMode() {}
+  override _updateScrollMode(): void {}
 
-  set spreadMode(mode) {}
+  set spreadMode(_mode: number) {}
 
-  _updateSpreadMode() {}
+  override _updateSpreadMode(): void {}
 }
 
 export { PDFSinglePageViewer };

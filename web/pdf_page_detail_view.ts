@@ -13,14 +13,29 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-
 import { BasePDFPageView } from "./base_pdf_page_view.js";
 import { OutputScale } from "pdfjs-lib";
 import { RenderingStates } from "./renderable_view.js";
 
+type DetailArea = {
+  minX: number;
+  minY: number;
+  width: number;
+  height: number;
+  scale: number;
+};
+
+type VisibleArea = {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+};
+
 class PDFPageDetailView extends BasePDFPageView {
-  #detailArea = null;
+  #detailArea: DetailArea | null = null;
+
+  pageView: any;
 
   /**
    * @type {boolean} True when the last rendering attempt of the view was
@@ -28,35 +43,38 @@ class PDFPageDetailView extends BasePDFPageView {
    *                 the visible area changes so much during the rendering that
    *                 we need to cancel the rendering and start over.
    */
-  renderingCancelled = false;
+  renderingCancelled: boolean = false;
 
-  constructor({ pageView }) {
+  constructor({ pageView }: { pageView: any }) {
     super(pageView);
 
     this.pageView = pageView;
     this.renderingId = "detail" + this.id;
 
     this.div = pageView.div;
+
+    // Delegate pdfPage to the underlying pageView dynamically.
+    Object.defineProperty(this, "pdfPage", {
+      get: () => this.pageView.pdfPage,
+      configurable: true,
+      enumerable: true,
+    });
   }
 
-  setPdfPage(pdfPage) {
+  setPdfPage(pdfPage: any): void {
     this.pageView.setPdfPage(pdfPage);
   }
 
-  get pdfPage() {
-    return this.pageView.pdfPage;
-  }
-
-  get renderingState() {
+  override get renderingState(): number {
     return super.renderingState;
   }
 
-  set renderingState(state) {
+  override set renderingState(state: number) {
     this.renderingCancelled = false;
     super.renderingState = state;
   }
 
-  reset({ keepCanvas = false } = {}) {
+  reset({ keepCanvas = false } = {}): void {
     const renderingCancelled =
       this.renderingCancelled ||
       this.renderingState === RenderingStates.RUNNING ||
@@ -70,7 +88,7 @@ class PDFPageDetailView extends BasePDFPageView {
     }
   }
 
-  #shouldRenderDifferentArea(visibleArea) {
+  #shouldRenderDifferentArea(visibleArea: VisibleArea): boolean {
     if (!this.#detailArea) {
       return true;
     }
@@ -126,14 +144,14 @@ class PDFPageDetailView extends BasePDFPageView {
     return false;
   }
 
-  update({ visibleArea = null, underlyingViewUpdated = false } = {}) {
+  update({ visibleArea = null, underlyingViewUpdated = false }: { visibleArea?: VisibleArea | null; underlyingViewUpdated?: boolean } = {}): void {
     if (underlyingViewUpdated) {
       this.cancelRendering();
       this.renderingState = RenderingStates.INITIAL;
       return;
     }
 
-    if (!this.#shouldRenderDifferentArea(visibleArea)) {
+    if (!visibleArea || !this.#shouldRenderDifferentArea(visibleArea)) {
       return;
     }
 
@@ -183,7 +201,7 @@ class PDFPageDetailView extends BasePDFPageView {
     this.reset({ keepCanvas: true });
   }
 
-  _getRenderingContext(canvas, transform) {
+  _getRenderingContext(canvas: HTMLCanvasElement, transform: number[]): any {
     const baseContext = this.pageView._getRenderingContext(
       canvas,
       transform,
@@ -203,7 +221,7 @@ class PDFPageDetailView extends BasePDFPageView {
       height: aHeight,
       minX: aMinX,
       minY: aMinY,
-    } = this.#detailArea;
+    } = this.#detailArea!;
 
     const detailMinX = aMinX / vWidth;
     const detailMinY = aMinY / vHeight;
@@ -212,7 +230,7 @@ class PDFPageDetailView extends BasePDFPageView {
 
     return {
       ...baseContext,
-      operationsFilter(index) {
+      operationsFilter(index: number) {
         if (recordedBBoxes.isEmpty(index)) {
           return false;
         }
@@ -226,7 +244,7 @@ class PDFPageDetailView extends BasePDFPageView {
     };
   }
 
-  async draw() {
+  override async draw(): Promise<void> {
     // The PDFPageView might have already dropped this PDFPageDetailView. In
     // that case, simply do nothing.
     if (this.pageView.detailView !== this) {
@@ -264,14 +282,14 @@ class PDFPageDetailView extends BasePDFPageView {
         canvasWrapper.prepend(newCanvas);
       }
     }, hideUntilComplete);
-    canvas.ariaHidden = true;
+    canvas.ariaHidden = "true";
     if (this.enableOptimizedPartialRendering) {
       canvas.className = "detailView";
     }
 
     const { width, height } = viewport;
 
-    const area = this.#detailArea;
+    const area = this.#detailArea!;
 
     const { pixelRatio } = OutputScale;
     const transform = [
